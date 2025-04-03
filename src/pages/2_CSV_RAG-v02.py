@@ -1,19 +1,12 @@
-# Location: pages/2_CSV_RAG.py
-# Complete implementation of CSV RAG with chat history persistence and model tracking
-
 import os
 import sys
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import uuid
-from datetime import datetime
 
 # Add the src directory to the path to allow importing from parent directory
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from models.csv_chatbot import CSVChatbot
-from models.chat_history_manager import ChatHistoryManager
-from models.auto_save import AutoSave
 
 # Page configuration
 st.set_page_config(
@@ -25,57 +18,12 @@ st.set_page_config(
 st.title("📊 CSV Document RAG")
 st.subheader("Chat with your CSV Data")
 
-# Initialize the chat history manager
-if "history_manager" not in st.session_state:
-    st.session_state.history_manager = ChatHistoryManager()
-    
-# Initialize auto-save utility
-if "auto_save" not in st.session_state:
-    st.session_state.auto_save = AutoSave(st.session_state.history_manager)
-
-# Setup auto-save for page navigation
-st.session_state.auto_save.setup_auto_save()
-
-# Initialize session state for current session ID
-if "csv_session_id" not in st.session_state:
-    # Generate a unique session ID for this chat session
-    st.session_state.csv_session_id = f"csv_{uuid.uuid4().hex[:8]}"
-
 # Initialize session state for chatbot and messages
 if "csv_chatbot" not in st.session_state:
     st.session_state.csv_chatbot = CSVChatbot()
     
 if "csv_messages" not in st.session_state:
-    # Try to load previous chat history for this session
-    previous_messages, session_metadata = st.session_state.history_manager.load_chat_history(st.session_state.csv_session_id)
-    
-    if previous_messages:
-        st.session_state.csv_messages = previous_messages
-        
-        # If we have metadata, restore relevant settings
-        if session_metadata:
-            # Restore model if available
-            if "model_name" in session_metadata:
-                model_name = session_metadata["model_name"]
-                if model_name != st.session_state.get("model_name", "gpt-3.5-turbo"):
-                    st.session_state.model_name = model_name
-                    # Will need to recreate chatbot with the right model later
-            
-            # Restore RAG parameters if available
-            if "k_value" in session_metadata:
-                st.session_state.k_value = session_metadata["k_value"]
-            if "chunk_size" in session_metadata:
-                st.session_state.chunk_size = session_metadata["chunk_size"]
-            if "chunk_overlap" in session_metadata:
-                st.session_state.chunk_overlap = session_metadata["chunk_overlap"]
-            
-            # Restore visualization settings if available
-            if "viz_enabled" in session_metadata:
-                st.session_state.viz_enabled = session_metadata["viz_enabled"]
-            if "viz_type" in session_metadata:
-                st.session_state.viz_type = session_metadata["viz_type"]
-    else:
-        st.session_state.csv_messages = []
+    st.session_state.csv_messages = []
 
 # Initialize RAG parameters in session state
 if "chunk_size" not in st.session_state:
@@ -86,13 +34,6 @@ if "chunk_overlap" not in st.session_state:
     
 if "k_value" not in st.session_state:
     st.session_state.k_value = 5
-
-# Initialize visualization settings
-if "viz_enabled" not in st.session_state:
-    st.session_state.viz_enabled = True
-    
-if "viz_type" not in st.session_state:
-    st.session_state.viz_type = "auto"
 
 # Sidebar for file upload and RAG configuration
 with st.sidebar:
@@ -155,7 +96,6 @@ with st.sidebar:
         if hasattr(st.session_state.csv_chatbot, 'documents') and st.session_state.csv_chatbot.documents:
             temp_chatbot.documents = st.session_state.csv_chatbot.documents
             temp_chatbot.file_metadata = st.session_state.csv_chatbot.file_metadata
-            temp_chatbot.data_frames = st.session_state.csv_chatbot.data_frames
             # Rebuild the vectorstore with the new embeddings model
             temp_chatbot.build_vectorstore()
         
@@ -193,137 +133,15 @@ with st.sidebar:
         
         # Add toggle for data visualization
         st.subheader("Visualization Settings")
-        viz_enabled = st.checkbox("Enable Auto-Visualization", value=st.session_state.viz_enabled)
-        if viz_enabled != st.session_state.viz_enabled:
-            st.session_state.viz_enabled = viz_enabled
+        viz_enabled = st.checkbox("Enable Auto-Visualization", value=True)
+        st.session_state.viz_enabled = viz_enabled
         
         if viz_enabled:
             viz_type = st.selectbox(
                 "Default Chart Type",
-                ["auto", "bar", "line", "scatter", "pie", "table"],
-                index=["auto", "bar", "line", "scatter", "pie", "table"].index(st.session_state.viz_type)
+                ["auto", "bar", "line", "scatter", "pie", "table"]
             )
-            if viz_type != st.session_state.viz_type:
-                st.session_state.viz_type = viz_type
-    
-    # Chat History Management
-    st.header("Chat History")
-    
-    # Show available chat sessions with enhanced metadata
-    csv_sessions = st.session_state.history_manager.list_sessions("csv")
-    
-    if csv_sessions:
-        # Display count and create dropdown
-        st.write(f"You have {len(csv_sessions)} saved chat sessions")
-        
-        # Create a new session option
-        session_options = ["Current Session"] + [
-            f"{s['session_id']} ({s['message_count']} msgs, {s.get('metadata', {}).get('model_name', 'unknown model')})" 
-            for s in csv_sessions
-        ]
-        
-        selected_session = st.selectbox(
-            "Select a session to load",
-            session_options
-        )
-        
-        if selected_session != "Current Session" and "(" in selected_session:
-            # Extract session ID from the selection
-            session_id = selected_session.split(" ")[0]
-            
-            # Get session details for display
-            session_info = next((s for s in csv_sessions if s["session_id"] == session_id), None)
-            
-            if session_info and "metadata" in session_info:
-                # Display session metadata
-                with st.expander("Session Details"):
-                    metadata = session_info["metadata"]
-                    st.write(f"**Model:** {metadata.get('model_name', 'Unknown')}")
-                    st.write(f"**Last Updated:** {session_info.get('last_updated', 'Unknown')}")
-                    st.write(f"**Messages:** {session_info.get('message_count', 0)}")
-                    
-                    # Show files that were processed
-                    if "files_processed" in metadata and metadata["files_processed"]:
-                        st.write("**Files:**")
-                        for file in metadata["files_processed"]:
-                            st.write(f"- {file}")
-                    
-                    # Show RAG parameters
-                    st.write("**RAG Parameters:**")
-                    st.write(f"- k_value: {metadata.get('k_value', 'N/A')}")
-                    st.write(f"- chunk_size: {metadata.get('chunk_size', 'N/A')}")
-                    st.write(f"- chunk_overlap: {metadata.get('chunk_overlap', 'N/A')}")
-                    
-                    # Show visualization settings if available
-                    if "viz_enabled" in metadata:
-                        st.write(f"**Visualization Enabled:** {metadata.get('viz_enabled', False)}")
-                    if "viz_type" in metadata:
-                        st.write(f"**Default Chart Type:** {metadata.get('viz_type', 'auto')}")
-            
-            # Button to load the selected session
-            if st.button("Load Selected Session"):
-                # Load the messages from this session
-                loaded_messages, session_metadata = st.session_state.history_manager.load_chat_history(session_id)
-                if loaded_messages:
-                    # Update the current session ID and messages
-                    st.session_state.csv_session_id = session_id
-                    st.session_state.csv_messages = loaded_messages
-                    
-                    # Update RAG parameters from metadata if available
-                    if session_metadata:
-                        if "model_name" in session_metadata:
-                            st.session_state.model_name = session_metadata["model_name"]
-                        if "k_value" in session_metadata:
-                            st.session_state.k_value = session_metadata["k_value"]
-                        if "chunk_size" in session_metadata:
-                            st.session_state.chunk_size = session_metadata["chunk_size"]
-                        if "chunk_overlap" in session_metadata:
-                            st.session_state.chunk_overlap = session_metadata["chunk_overlap"]
-                        if "viz_enabled" in session_metadata:
-                            st.session_state.viz_enabled = session_metadata["viz_enabled"]
-                        if "viz_type" in session_metadata:
-                            st.session_state.viz_type = session_metadata["viz_type"]
-                    
-                    st.success(f"Loaded chat session with {len(loaded_messages)} messages")
-                    st.experimental_rerun()
-                else:
-                    st.error("Failed to load chat session")
-    
-    # Add explicit save button
-    if st.button("💾 Save Current Chat History"):
-        if st.session_state.csv_messages:
-            # Collect current metadata
-            current_metadata = {
-                "model_name": st.session_state.get("model_name", "gpt-3.5-turbo"),
-                "k_value": st.session_state.k_value,
-                "chunk_size": st.session_state.chunk_size,
-                "chunk_overlap": st.session_state.chunk_overlap,
-                "viz_enabled": st.session_state.viz_enabled,
-                "viz_type": st.session_state.viz_type,
-                "files_processed": list(st.session_state.csv_chatbot.file_metadata.keys()) if hasattr(st.session_state.csv_chatbot, 'file_metadata') else []
-            }
-            
-            saved_path = st.session_state.history_manager.save_chat_history(
-                st.session_state.csv_messages,
-                "csv",
-                st.session_state.csv_session_id,
-                metadata=current_metadata
-            )
-            if saved_path:
-                st.success(f"Chat history saved successfully! Session ID: {st.session_state.csv_session_id}")
-            else:
-                st.info("No changes to save.")
-        else:
-            st.info("No messages to save.")
-    
-    # Allow creating a new session
-    if st.button("Start New Chat Session"):
-        # Generate a new session ID
-        st.session_state.csv_session_id = f"csv_{uuid.uuid4().hex[:8]}"
-        # Clear messages
-        st.session_state.csv_messages = []
-        st.success("Started a new chat session")
-        st.experimental_rerun()
+            st.session_state.viz_type = viz_type
     
     # Status information
     if hasattr(st.session_state.csv_chatbot, 'vectorstore') and st.session_state.csv_chatbot.vectorstore:
@@ -331,63 +149,20 @@ with st.sidebar:
     else:
         st.warning("⚠️ No vector database available. Please upload and process files.")
     
-    # Modify the Clear Chat button to preserve the saved history
-    if st.button("Clear Chat Display"):
-        # Keep a backup of messages before clearing if they should be auto-saved
-        if st.session_state.csv_messages:
-            # Auto-save before clearing
-            current_metadata = {
-                "model_name": st.session_state.get("model_name", "gpt-3.5-turbo"),
-                "k_value": st.session_state.k_value,
-                "chunk_size": st.session_state.chunk_size,
-                "chunk_overlap": st.session_state.chunk_overlap,
-                "viz_enabled": st.session_state.viz_enabled,
-                "viz_type": st.session_state.viz_type,
-                "files_processed": list(st.session_state.csv_chatbot.file_metadata.keys()) if hasattr(st.session_state.csv_chatbot, 'file_metadata') else []
-            }
-            st.session_state.history_manager.save_chat_history(
-                st.session_state.csv_messages,
-                "csv",
-                st.session_state.csv_session_id,
-                metadata=current_metadata
-            )
-        
-        # Clear the display only
+    # Clear chat button
+    if st.button("Clear Chat History"):
         st.session_state.csv_messages = []
-        st.success("Chat display cleared! Your history has been saved and can be loaded again.")
+        st.success("Chat history cleared!")
     
-    # Modify the Clear All Data button
+    # Clear all data button
     if st.button("Clear All Data"):
-        # Auto-save before clearing if there's anything to save
-        if st.session_state.csv_messages:
-            current_metadata = {
-                "model_name": st.session_state.get("model_name", "gpt-3.5-turbo"),
-                "k_value": st.session_state.k_value,
-                "chunk_size": st.session_state.chunk_size,
-                "chunk_overlap": st.session_state.chunk_overlap,
-                "viz_enabled": st.session_state.viz_enabled,
-                "viz_type": st.session_state.viz_type,
-                "files_processed": list(st.session_state.csv_chatbot.file_metadata.keys()) if hasattr(st.session_state.csv_chatbot, 'file_metadata') else []
-            }
-            st.session_state.history_manager.save_chat_history(
-                st.session_state.csv_messages,
-                "csv",
-                st.session_state.csv_session_id,
-                metadata=current_metadata
-            )
-        
-        # Clear the chatbot data
         st.session_state.csv_chatbot.clear()
-        # Clear the display
         st.session_state.csv_messages = []
-        st.success("All data cleared! Your chat history has been saved and can be loaded again.")
+        st.success("All data and chat history cleared! Please upload and process files again.")
     
     # Check if OpenAI API key is set
     if not os.getenv("OPENAI_API_KEY"):
         st.warning("Please set your OpenAI API key in a .env file or as an environment variable.")
-
-# Display current session info
-st.caption(f"Current Session ID: {st.session_state.csv_session_id}")
 
 # Display example prompts
 st.subheader("Example Questions")
@@ -401,75 +176,30 @@ col1, col2, col3 = st.columns(3)
 with col1:
     if st.button(example_qs[0]):
         prompt = example_qs[0]
-        user_message = {
-            "role": "user", 
-            "content": prompt,
-            "timestamp": datetime.now().isoformat()
-        }
-        st.session_state.csv_messages.append(user_message)
+        st.session_state.csv_messages.append({"role": "user", "content": prompt})
         
 with col2:
     if st.button(example_qs[1]):
         prompt = example_qs[1]
-        user_message = {
-            "role": "user", 
-            "content": prompt,
-            "timestamp": datetime.now().isoformat()
-        }
-        st.session_state.csv_messages.append(user_message)
+        st.session_state.csv_messages.append({"role": "user", "content": prompt})
         
 with col3:
     if st.button(example_qs[2]):
         prompt = example_qs[2]
-        user_message = {
-            "role": "user", 
-            "content": prompt,
-            "timestamp": datetime.now().isoformat()
-        }
-        st.session_state.csv_messages.append(user_message)
+        st.session_state.csv_messages.append({"role": "user", "content": prompt})
 
 # Main chat interface
 st.subheader("Chat with your CSV Data")
 
-# Display chat messages with enhanced metadata
+# Display chat messages
 for message in st.session_state.csv_messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
-        
-        # Display metadata for assistant messages
-        if message["role"] == "assistant" and "model" in message:
-            with st.expander("Message Details"):
-                # Show model used
-                st.caption(f"**Model**: {message.get('model', 'Unknown')}")
-                
-                # Show timestamp if available
-                if "timestamp" in message:
-                    st.caption(f"**Time**: {message['timestamp']}")
-                
-                # Show RAG parameters if available
-                if "rag_params" in message:
-                    st.caption("**RAG Parameters**:")
-                    params = message["rag_params"]
-                    st.caption(f"- k_value: {params.get('k_value', 'N/A')}")
-                    st.caption(f"- chunk_size: {params.get('chunk_size', 'N/A')}")
-                    st.caption(f"- chunk_overlap: {params.get('chunk_overlap', 'N/A')}")
-                
-                # Show visualization settings if available
-                if "viz_settings" in message:
-                    st.caption("**Visualization Settings**:")
-                    viz = message["viz_settings"]
-                    st.caption(f"- Enabled: {viz.get('enabled', 'N/A')}")
-                    st.caption(f"- Chart Type: {viz.get('type', 'N/A')}")
 
 # Chat input
 if prompt := st.chat_input("Ask a question about your CSV data"):
-    # Add user message to chat history with current timestamp
-    user_message = {
-        "role": "user", 
-        "content": prompt,
-        "timestamp": datetime.now().isoformat()
-    }
-    st.session_state.csv_messages.append(user_message)
+    # Add user message to chat history
+    st.session_state.csv_messages.append({"role": "user", "content": prompt})
     
     # Display user message
     with st.chat_message("user"):
@@ -484,16 +214,13 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
                     answer_text = "Please upload and process CSV files first to create a knowledge base."
                     st.warning(answer_text)
                 else:
-                    # Get current model information
-                    current_model = st.session_state.get("model_name", "gpt-3.5-turbo")
-                    
-                    # Check if visualization is requested
-                    viz_keywords = ["chart", "plot", "graph", "visualize", "visualization", "show", "display"]
-                    is_viz_query = any(keyword in prompt.lower() for keyword in viz_keywords)
-                    viz_enabled = st.session_state.get("viz_enabled", False)
-                    
                     if st.session_state.debug_mode:
                         response = st.session_state.csv_chatbot.ask(prompt, return_context=True)
+                        
+                        # Check if visualization is requested
+                        viz_keywords = ["chart", "plot", "graph", "visualize", "visualization", "show", "display"]
+                        is_viz_query = any(keyword in prompt.lower() for keyword in viz_keywords)
+                        viz_enabled = st.session_state.get("viz_enabled", False)
                         
                         # Create tabs for answer and debugging info
                         if is_viz_query and viz_enabled:
@@ -590,9 +317,7 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
                                 "k_value": st.session_state.k_value,
                                 "chunk_size": st.session_state.chunk_size,
                                 "chunk_overlap": st.session_state.chunk_overlap,
-                                "model": st.session_state.model_name,
-                                "viz_enabled": st.session_state.viz_enabled,
-                                "viz_type": st.session_state.viz_type
+                                "model": st.session_state.model_name
                             })
                             
                             # Retrieved chunks stats
@@ -614,13 +339,14 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
                         # Regular mode, just show the answer
                         answer_text = st.session_state.csv_chatbot.ask(prompt)
                         
-                        # Add visualization if requested
-                        if is_viz_query and viz_enabled and hasattr(st.session_state.csv_chatbot, 'data_frames') and st.session_state.csv_chatbot.data_frames:
+                        # Check if this is a visualization request
+                        viz_keywords = ["chart", "plot", "graph", "visualize", "visualization", "show", "display"]
+                        is_viz_query = any(keyword in prompt.lower() for keyword in viz_keywords)
+                        
+                        if is_viz_query and hasattr(st.session_state.csv_chatbot, 'data_frames') and st.session_state.csv_chatbot.data_frames:
                             # Display the answer
                             st.markdown(answer_text)
                             
-                            # Location: pages/2_CSV_RAG.py (continued)
-
                             # Try to create a basic visualization
                             st.subheader("Visualization")
                             df_key = list(st.session_state.csv_chatbot.data_frames.keys())[0]
@@ -632,13 +358,8 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
                                 fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1], title=f"Scatter Plot: {numeric_cols[0]} vs {numeric_cols[1]}")
                                 st.plotly_chart(fig, use_container_width=True)
                             elif len(df.columns) >= 2:
-                                try:
-                                    categorical_col = df.select_dtypes(include=['object']).columns[0] if len(df.select_dtypes(include=['object']).columns) > 0 else df.columns[0]
-                                    numeric_col = df.select_dtypes(include=['number']).columns[0] if len(df.select_dtypes(include=['number']).columns) > 0 else df.columns[1]
-                                    fig = px.bar(df, x=categorical_col, y=numeric_col, title=f"Bar Chart: {numeric_col} by {categorical_col}")
-                                    st.plotly_chart(fig, use_container_width=True)
-                                except:
-                                    st.dataframe(df.head(10))
+                                fig = px.bar(df, x=df.columns[0], y=df.columns[1], title=f"Bar Chart: {df.columns[1]} by {df.columns[0]}")
+                                st.plotly_chart(fig, use_container_width=True)
                             else:
                                 st.dataframe(df.head(10))
                         else:
@@ -647,41 +368,8 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
                 answer_text = f"An error occurred: {str(e)}"
                 st.error(answer_text)
     
-    # Add assistant response to chat history with model information and timestamp
-    assistant_message = {
-        "role": "assistant", 
-        "content": answer_text,
-        "model": st.session_state.get("model_name", "gpt-3.5-turbo"),
-        "timestamp": datetime.now().isoformat(),
-        "rag_params": {
-            "k_value": st.session_state.k_value,
-            "chunk_size": st.session_state.chunk_size,
-            "chunk_overlap": st.session_state.chunk_overlap
-        },
-        "viz_settings": {
-            "enabled": st.session_state.viz_enabled,
-            "type": st.session_state.viz_type
-        }
-    }
-    st.session_state.csv_messages.append(assistant_message)
-    
-    # Save chat history to disk with metadata
-    session_metadata = {
-        "model_name": st.session_state.get("model_name", "gpt-3.5-turbo"),
-        "k_value": st.session_state.k_value,
-        "chunk_size": st.session_state.chunk_size,
-        "chunk_overlap": st.session_state.chunk_overlap,
-        "viz_enabled": st.session_state.viz_enabled,
-        "viz_type": st.session_state.viz_type,
-        "files_processed": list(st.session_state.csv_chatbot.file_metadata.keys()) if hasattr(st.session_state.csv_chatbot, 'file_metadata') else []
-    }
-    
-    st.session_state.history_manager.save_chat_history(
-        st.session_state.csv_messages,
-        "csv",
-        st.session_state.csv_session_id,
-        metadata=session_metadata
-    )
+    # Add assistant response to chat history
+    st.session_state.csv_messages.append({"role": "assistant", "content": answer_text})
     
     # Force a rerun to update the chat history display
     st.rerun()

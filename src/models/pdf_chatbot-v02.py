@@ -89,5 +89,10 @@ class PDFChatbot(DocumentChatbot):
     
     def clear(self):
         """Clear all documents and reset the chatbot"""
-        # Call the parent clear method
-        super().clear()
+        self.documents = []
+        self.file_metadata = {}
+        self.vectorstore = None
+        self.chat_history = []
+        
+        # Create a new temporary directory for Chroma DB
+        self.persist_directory = tempfile.mkdtemp()

@@ -52,42 +52,21 @@ class PDFChatbot(DocumentChatbot):
             
     def ask(self, question, return_context=False):
         """Ask a question about the PDF documents"""
-        try:
-            # Check if vectorstore exists
-            if not self.vectorstore:
-                error_msg = "Please process PDF files first to create a knowledge base."
-                if return_context:
-                    return {
-                        "answer": error_msg,
-                        "retrieved_context": "No vector database available.",
-                        "formatted_prompt": "Error: No vector database"
-                    }
-                return error_msg
-                
-            # Get the response from the base class
-            response = super().ask(question, return_context=True)
-            
-            # If return_context is true, we need to return the full context
-            if return_context and isinstance(response, dict):
-                return response
-            elif isinstance(response, dict) and "answer" in response:
-                # Just return the answer
-                return response["answer"]
-            else:
-                # Return the response as is
-                return response
-                
-        except Exception as e:
-            error_msg = f"Error querying PDF knowledge base: {str(e)}"
-            if return_context:
-                return {
-                    "answer": error_msg,
-                    "retrieved_context": "Error occurred during retrieval",
-                    "formatted_prompt": "Error occurred"
-                }
-            return error_msg
+        response = super().ask(question, return_context=True)
+        
+        # If return_context is true, we need to return the full context
+        if return_context and isinstance(response, dict):
+            return response
+        elif isinstance(response, dict) and "answer" in response:
+            # Just return the answer
+            return response["answer"]
+        else:
+            # Return the response as is
+            return response
     
     def clear(self):
         """Clear all documents and reset the chatbot"""
-        # Call the parent clear method
-        super().clear()
+        self.documents = []
+        self.file_metadata = {}
+        self.vectorstore = None
+        self.chat_history = []
