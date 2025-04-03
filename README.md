@@ -53,6 +53,8 @@ cd st_rag_demo
 
 2. Install dependencies:
 ```bash
+conda create -n st_rag_demo python=3.11
+conda activate st_rag_demo
 pip install -r requirements.txt
 ```
 
@@ -106,11 +108,21 @@ This application is designed as a teaching tool to help understand:
 
 ```
 st_rag_demo/
-├── app.py                  # Main Streamlit application
-├── requirements.txt        # Project dependencies
-├── .env                    # Environment variables (create this)
-├── .gitignore              # Git ignore file
-└── README.md               # This documentation
+├── .env                         # Environment variables file
+└── src/                         # Source code directory
+    ├── app.py                   # Main entrypoint for the Streamlit app
+    ├── pages/                   # Directory for additional pages
+    │   ├── 1_PDF_RAG.py         # PDF document RAG page (fully implemented)
+    │   ├── 2_CSV_RAG.py         # CSV data RAG page (placeholder)
+    │   ├── 3_SQLite_RAG.py      # SQLite data RAG page (placeholder)
+    │   └── 4_RAG_Debugging.py   # RAG debugging tools page (placeholder)
+    ├── models/                  # Model definitions
+    │   ├── __init__.py          # Exports model classes
+    │   ├── document_chatbot.py  # Core DocumentChatbot class 
+    │   └── pdf_chatbot.py       # PDF-specific chatbot
+    └── utils/                   # Shared utility functions
+        ├── __init__.py          # Exports utility functions
+        └── pdf_utils.py         # PDF processing utilities
 ```
 
 ## License

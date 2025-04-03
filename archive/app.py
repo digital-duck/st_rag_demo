@@ -279,11 +279,16 @@ class DocumentChatbot:
         splits = self.text_splitter.split_documents(self.documents)
         
         # Log chunking stats for debugging
+        # Don't try to access internal attributes - use the values from session state
+        # or use defaults if they're not available
+        chunk_size = st.session_state.get('chunk_size', 1000) if hasattr(st, 'session_state') else 1000
+        chunk_overlap = st.session_state.get('chunk_overlap', 100) if hasattr(st, 'session_state') else 100
+        
         self.chunk_stats = {
             "total_chunks": len(splits),
             "avg_chunk_size": sum(len(d.page_content) for d in splits) / max(1, len(splits)),
-            "chunk_size_setting": self.text_splitter.chunk_size,
-            "chunk_overlap_setting": self.text_splitter.chunk_overlap
+            "chunk_size_setting": chunk_size,
+            "chunk_overlap_setting": chunk_overlap
         }
         
         # Create vector store
@@ -665,7 +670,7 @@ def main():
         if model_provider == "OpenAI":
             model_name = st.sidebar.selectbox(
                 "Select OpenAI Model",
-                ["gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"]
+                ["gpt-3.5-turbo", "gpt-4o-mini", "gpt-4", "gpt-4-turbo"]
             )
             
             if "model_name" not in st.session_state or st.session_state.model_name != model_name:
@@ -1005,7 +1010,7 @@ def main():
                             "k_value": st.session_state.k_value,
                             "chunk_size": st.session_state.chunk_size,
                             "chunk_overlap": st.session_state.chunk_overlap,
-                            "model": "gpt-3.5-turbo"
+                            "model": st.session_state.get("model_name", "gpt-3.5-turbo")
                         })
                         
                         # Retrieved chunks stats
