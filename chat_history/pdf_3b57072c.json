@@ -1,0 +1,31 @@
+{
+  "session_id": "pdf_3b57072c",
+  "rag_type": "pdf",
+  "last_updated": "2025-04-04T03:25:13.978284",
+  "message_count": 2,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Can you suggest 2 thai recipes for dinner tonight",
+      "timestamp": "2025-04-04T03:25:08.597286"
+    },
+    {
+      "role": "assistant",
+      "content": "Certainly! Here are two Thai recipes that you can consider for dinner tonight:\n\n1. **Gaeng Kiew Wan Goong (Green Curry with Shrimps)**\n   - Preparation: 10 mins\n   - Cooking: 25 mins\n   - Total: 35 mins\n   - Spicy Level: \n   - **Ingredients (Two servings):**\n     - 8 peeled Thai shrimps\n     - 100 grams round eggplant or brinjal, chopped into four pieces\n     - 100 grams coconut cream\n     - 500 grams coconut milk\n     - 40 grams Kiew Wan curry paste\n     - 20 grams palm sugar\n     - 2 tbsp fish sauce\n     - 2 sliced red spur chilies\n     - 4 grams sweet basil leaves\n     - 2 leaves kaffir lime, shredded\n   - **Directions:** \n     1. Simmer coconut cream in a pan until the oil separates. Add Kiew Wan curry paste and stir until it dissolves.\n     2. Add shrimps and fry until well cooked. Pour into a pot then add coconut milk. Bring to full boil over medium heat.\n     3. Add round eggplant or brinjal and season with fish sauce and palm sugar. When the curry returns to a boil, the round eggplant or brinjal will be ready.\n\n2. **Yum Woon Sen Neua (Spicy Beef Glass Noodles Salad)**\n   - Preparation: 20 mins\n   - Cooking: 10 mins\n   - Total: 30 mins\n   - Spicy Level: \n   - **Ingredients:**\n     - 100 grams grilled beef\n     - 20 grams dried shrimps, fried until crispy\n     - 4 cloves garlic, minced\n     - 1 onion, julienned\n     - 2-3 Thai chilies, sliced thinly\n     - 2 stalks Thai celery, chopped\n     - 2 tbsp fish sauce\n     - 2 tbsp lime juice\n     - 5 cherry tomatoes, halved\n     - 1 tbsp chopped coriander\n     - 4 tsp chicken stock\n     - 5 leaves coriander\n   - **Directions:** (Directions for this recipe are missing in the provided context. You may need to refer to a more detailed recipe for the exact steps.)\n\nThese recipes offer a balance of flavors and are sure to make for a delicious Thai dinner experience. Enjoy your cooking!",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T03:25:13.977825",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": []
+  }
+}

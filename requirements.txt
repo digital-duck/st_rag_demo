@@ -18,3 +18,7 @@ faiss-cpu>=1.7.4
 boto3>=1.28.38
 sqlalchemy>=2.0.23
 sqlite3-api>=1.0.3
+
+# required for open-source embeddings
+langchain-huggingface
+sentence-transformers

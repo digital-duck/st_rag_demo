@@ -1,6 +1,7 @@
 import tempfile
 import os
 import pandas as pd
+import io  # Import the standard io module
 import streamlit as st
 from langchain_community.document_loaders import DataFrameLoader
 from langchain_core.documents import Document
@@ -29,8 +30,8 @@ class CSVChatbot(DocumentChatbot):
             # Store the DataFrame for later use in visualizations
             self.data_frames[file.name] = df
             
-            # Get DataFrame info as a string
-            buffer = pd.io.StringIO()
+            # Get DataFrame info as a string - using standard io.StringIO instead of pandas.io.StringIO
+            buffer = io.StringIO()
             df.info(buf=buffer)
             df_info = buffer.getvalue()
             
@@ -58,46 +59,80 @@ class CSVChatbot(DocumentChatbot):
             self.file_metadata[file.name] = csv_metadata
             
             # Convert DataFrame to documents
-            # Use the first column as the page content, or a concatenation of all columns
-            if len(df.columns) > 0:
-                # Create multiple documents, one for each row with all columns
-                documents = []
-                for idx, row in df.iterrows():
-                    # Convert row to string with column names
-                    row_content = "\n".join([f"{col}: {row[col]}" for col in df.columns])
+            try:
+                # Simpler approach - create a single document with full DataFrame summary
+                full_csv_content = f"""
+                CSV File: {file.name}
+                Shape: {df.shape[0]} rows × {df.shape[1]} columns
+                Columns: {', '.join(df.columns.tolist())}
+                
+                DataFrame Summary:
+                {df_info}
+                
+                Statistics:
+                {df_stats}
+                
+                Sample Data:
+                {df_sample}
+                """
+                
+                # Create a single document with the full content
+                doc = Document(
+                    page_content=full_csv_content,
+                    metadata={
+                        "file_type": "csv",
+                        "file_name": file.name,
+                        "row_count": df.shape[0],
+                        "column_count": df.shape[1],
+                        "file_info": csv_metadata
+                    }
+                )
+                
+                # Add to documents collection
+                self.documents.append(doc)
+                
+                # Also add documents for each column
+                for col in df.columns:
+                    col_stats = df[col].describe().to_string() if pd.api.types.is_numeric_dtype(df[col]) else f"Unique values: {df[col].nunique()}"
+                    col_content = f"""
+                    Column: {col}
+                    Data Type: {df[col].dtype}
                     
-                    # Create document
-                    doc = Document(
-                        page_content=row_content,
+                    Statistics:
+                    {col_stats}
+                    
+                    Sample Values:
+                    {df[col].head(10).to_string()}
+                    """
+                    
+                    col_doc = Document(
+                        page_content=col_content,
                         metadata={
-                            "file_type": "csv",
+                            "file_type": "csv_column",
                             "file_name": file.name,
-                            "row_index": idx,
+                            "column_name": col,
                             "file_info": csv_metadata
                         }
                     )
-                    documents.append(doc)
+                    
+                    self.documents.append(col_doc)
                 
-                # Add to documents collection
-                self.documents.extend(documents)
-            else:
-                # Fallback method using DataFrameLoader
-                loader = DataFrameLoader(df)
-                csv_docs = loader.load()
-                
-                # Add metadata to documents
-                for doc in csv_docs:
-                    doc.metadata["file_type"] = "csv"
-                    doc.metadata["file_name"] = file.name
-                    doc.metadata["file_info"] = csv_metadata
-                
-                # Add to documents collection
-                self.documents.extend(csv_docs)
+            except Exception as column_error:
+                st.warning(f"Warning creating column-specific documents: {str(column_error)}")
+                # Fall back to a simpler approach
+                doc = Document(
+                    page_content=csv_metadata,
+                    metadata={
+                        "file_type": "csv",
+                        "file_name": file.name
+                    }
+                )
+                self.documents.append(doc)
             
             # Clean up
             os.unlink(tmp_path)
             
-            return len(df)
+            return df.shape[0]  # Return number of rows processed
         except Exception as e:
             st.error(f"Error processing CSV file: {str(e)}")
             return 0
@@ -162,9 +197,12 @@ class CSVChatbot(DocumentChatbot):
         """Clear all documents and reset the chatbot"""
         self.documents = []
         self.file_metadata = {}
-        self.vectorstore = None
         self.chat_history = []
         self.data_frames = {}
         
-        # Create a new temporary directory for Chroma DB
-        self.persist_directory = tempfile.mkdtemp()
+        # Note: We don't reset the vectorstore to preserve persistence across sessions
+        # If you want to truly clear everything, uncomment below:
+        # import shutil
+        # if os.path.exists(self.persist_directory):
+        #     shutil.rmtree(self.persist_directory)
+        # self.vectorstore = None

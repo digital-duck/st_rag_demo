@@ -1,5 +1,7 @@
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 from langchain_community.vectorstores import Chroma
+# Updated import path for HuggingFaceEmbeddings as per warning
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.prompts import MessagesPlaceholder
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -11,22 +13,27 @@ class DocumentChatbot:
     """Base class for document chatbots"""
     
     def __init__(self, api_key=None, model_name="gpt-3.5-turbo"):
-        """Initialize the document chatbot with OpenAI and ChromaDB"""
-        # Use provided API key or get from environment
+        """Initialize the document chatbot with LLM and vector store"""
+        # Use provided API key or get from environment for the LLM
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         
         if not self.api_key:
-            raise ValueError("OpenAI API key is required")
+            raise ValueError("OpenAI API key is required for the LLM")
         
-        # Initialize the OpenAI model
+        # Initialize the OpenAI model for LLM
         self.llm = ChatOpenAI(
             model=model_name,
             openai_api_key=self.api_key,
             temperature=0.2
         )
         
-        # Initialize embeddings
-        self.embeddings = OpenAIEmbeddings(openai_api_key=self.api_key)
+        # Initialize embeddings with an open-source model (no API key required)
+        # all-MiniLM-L6-v2 is a good balance between speed and quality
+        # Using the updated HuggingFaceEmbeddings from langchain_huggingface
+        self.embeddings = HuggingFaceEmbeddings(
+            model_name="sentence-transformers/all-MiniLM-L6-v2",
+            model_kwargs={'device': 'cpu'}  # Use CPU for compatibility
+        )
         
         # Initialize document splitter with default values
         # These can be updated via the UI in debug mode
@@ -46,9 +53,27 @@ class DocumentChatbot:
         self.file_metadata = {}
         self.chat_history = []
         
-        # Create a temporary directory for Chroma DB
-        self.persist_directory = tempfile.mkdtemp()
+        # Create a persistent directory for Chroma DB
+        self.persist_directory = os.path.join(os.getcwd(), "vector_db", f"{self.__class__.__name__.lower()}_db")
+        os.makedirs(self.persist_directory, exist_ok=True)
         
+        # Initialize the vectorstore from the persistent directory if it exists
+        self._load_vectorstore()
+    
+    def _load_vectorstore(self):
+        """Load vectorstore from persistent directory if it exists"""
+        try:
+            if os.path.exists(os.path.join(self.persist_directory, "chroma.sqlite3")):
+                self.vectorstore = Chroma(
+                    persist_directory=self.persist_directory,
+                    embedding_function=self.embeddings
+                )
+                return True
+            return False
+        except Exception as e:
+            print(f"Error loading vectorstore: {str(e)}")
+            return False
+            
     def update_chunk_settings(self, chunk_size=None, chunk_overlap=None):
         """Update text splitter settings if provided"""
         if chunk_size:
@@ -81,8 +106,6 @@ class DocumentChatbot:
             return False
             
         # Log chunking stats for debugging
-        # Don't try to access internal attributes - use the values from session state
-        # or use defaults if they're not available
         chunk_size = st.session_state.get('chunk_size', 1000) if hasattr(st, 'session_state') else 1000
         chunk_overlap = st.session_state.get('chunk_overlap', 100) if hasattr(st, 'session_state') else 100
         
@@ -94,16 +117,18 @@ class DocumentChatbot:
         }
         
         try:
-            # Create vector store with persistent storage
-            self.vectorstore = Chroma.from_documents(
-                documents=splits, 
-                embedding=self.embeddings,
-                persist_directory=self.persist_directory
-            )
+            # Create or update vector store with persistent storage
+            if self.vectorstore is None:
+                self.vectorstore = Chroma.from_documents(
+                    documents=splits, 
+                    embedding=self.embeddings,
+                    persist_directory=self.persist_directory
+                )
+            else:
+                # Add documents to existing vectorstore
+                self.vectorstore.add_documents(splits)
             
-            # Ensure the vector store is persisted
-            if hasattr(self.vectorstore, '_persist'):
-                self.vectorstore._persist()
+            # NOTE: Chroma 0.4.x+ automatically persists documents, no need for explicit persist()
                 
             return True
         except Exception as e:
@@ -149,7 +174,7 @@ class DocumentChatbot:
             )
             
             # Get retrieved documents separately 
-            retrieved_docs = retriever.get_relevant_documents(question)
+            retrieved_docs = retriever.invoke(question)
             
             # Format the retrieved context as a string for debugging
             retrieved_context = "\n\n---\n\n".join([f"Document {i+1}:\n{doc.page_content}" 
@@ -233,8 +258,11 @@ Files metadata: {file_info}
         """Clear all documents and reset the chatbot"""
         self.documents = []
         self.file_metadata = {}
-        self.vectorstore = None
         self.chat_history = []
         
-        # Create a new temporary directory for Chroma DB
-        self.persist_directory = tempfile.mkdtemp()
+        # Note: We don't reset the vectorstore to preserve persistence
+        # If you want to truly clear everything, uncomment below:
+        # import shutil
+        # if os.path.exists(self.persist_directory):
+        #     shutil.rmtree(self.persist_directory)
+        # self.vectorstore = None

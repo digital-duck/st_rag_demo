@@ -192,7 +192,7 @@ with st.sidebar:
                     st.session_state.csv_session_id = session_id
                     st.session_state.csv_messages = loaded_messages
                     st.success(f"Loaded chat session with {len(loaded_messages)} messages")
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("Failed to load chat session")
     
@@ -203,7 +203,7 @@ with st.sidebar:
         # Clear messages
         st.session_state.csv_messages = []
         st.success("Started a new chat session")
-        st.experimental_rerun()
+        st.rerun()
     
     # Status information
     if hasattr(st.session_state.csv_chatbot, 'vectorstore') and st.session_state.csv_chatbot.vectorstore:

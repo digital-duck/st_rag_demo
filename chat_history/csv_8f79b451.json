@@ -1,0 +1,81 @@
+{
+  "session_id": "csv_8f79b451",
+  "rag_type": "csv",
+  "last_updated": "2025-04-04T03:23:07.668689",
+  "message_count": 8,
+  "messages": [
+    {
+      "role": "user",
+      "content": "What is Codebasics",
+      "timestamp": "2025-04-04T03:22:25.404078"
+    },
+    {
+      "role": "assistant",
+      "content": "Codebasics is an educational platform that offers courses in IT and Data Analytics. They have a bootcamp specifically designed for beginners with no prior experience in the field. Codebasics has a track record of helping over 9000 learners benefit from the quality of their courses. You can trust them based on the positive reviews from past learners, and you can even connect with them through their LinkedIn profiles to ask directly about their experience.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T03:22:27.307663",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    },
+    {
+      "role": "user",
+      "content": "how to learn python",
+      "timestamp": "2025-04-04T03:22:44.949205"
+    },
+    {
+      "role": "assistant",
+      "content": "Based on the information provided in the context, Codebasics offers courses that can help you learn Python. If you are a beginner with no prior programming experience, you can consider taking their bootcamp, which is designed for individuals like you. The bootcamp requires only a functional laptop with at least 4GB of RAM, an internet connection, and a willingness to learn data analysis.\n\nAdditionally, Codebasics has a track record of helping over 9000 learners benefit from their courses, indicating that they have experience in teaching Python and related topics. You can check the reviews section and even connect with past learners through their LinkedIn profiles to get a better understanding of the learning experience at Codebasics.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T03:22:47.180902",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    },
+    {
+      "role": "user",
+      "content": "what is 1+2",
+      "timestamp": "2025-04-04T03:22:54.638250"
+    },
+    {
+      "role": "assistant",
+      "content": "The question \"what is 1+2\" is a basic arithmetic question, and the answer is 3.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T03:22:55.455518",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    },
+    {
+      "role": "user",
+      "content": "what is square root of 3",
+      "timestamp": "2025-04-04T03:23:07.009914"
+    },
+    {
+      "role": "assistant",
+      "content": "The square root of 3 is approximately 1.732.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T03:23:07.668249",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": [
+      "Code_Basics_FAQ.csv"
+    ]
+  }
+}

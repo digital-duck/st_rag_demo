@@ -1,11 +1,11 @@
 # Location: pages/2_CSV_RAG.py
-# Complete implementation of CSV RAG with chat history persistence and model tracking
+# Simplified implementation of CSV RAG with chat history persistence and model tracking
+# Visualization features removed for simplicity
 
 import os
 import sys
 import streamlit as st
 import pandas as pd
-import plotly.express as px
 import uuid
 from datetime import datetime
 
@@ -23,7 +23,6 @@ st.set_page_config(
 )
 
 st.title("📊 CSV Document RAG")
-st.subheader("Chat with your CSV Data")
 
 # Initialize the chat history manager
 if "history_manager" not in st.session_state:
@@ -68,12 +67,6 @@ if "csv_messages" not in st.session_state:
                 st.session_state.chunk_size = session_metadata["chunk_size"]
             if "chunk_overlap" in session_metadata:
                 st.session_state.chunk_overlap = session_metadata["chunk_overlap"]
-            
-            # Restore visualization settings if available
-            if "viz_enabled" in session_metadata:
-                st.session_state.viz_enabled = session_metadata["viz_enabled"]
-            if "viz_type" in session_metadata:
-                st.session_state.viz_type = session_metadata["viz_type"]
     else:
         st.session_state.csv_messages = []
 
@@ -86,13 +79,6 @@ if "chunk_overlap" not in st.session_state:
     
 if "k_value" not in st.session_state:
     st.session_state.k_value = 5
-
-# Initialize visualization settings
-if "viz_enabled" not in st.session_state:
-    st.session_state.viz_enabled = True
-    
-if "viz_type" not in st.session_state:
-    st.session_state.viz_type = "auto"
 
 # Sidebar for file upload and RAG configuration
 with st.sidebar:
@@ -190,21 +176,6 @@ with st.sidebar:
         if new_chunk_overlap != st.session_state.chunk_overlap:
             st.session_state.chunk_overlap = new_chunk_overlap
             st.warning("Chunk overlap updated. You'll need to reprocess files for this to take effect.")
-        
-        # Add toggle for data visualization
-        st.subheader("Visualization Settings")
-        viz_enabled = st.checkbox("Enable Auto-Visualization", value=st.session_state.viz_enabled)
-        if viz_enabled != st.session_state.viz_enabled:
-            st.session_state.viz_enabled = viz_enabled
-        
-        if viz_enabled:
-            viz_type = st.selectbox(
-                "Default Chart Type",
-                ["auto", "bar", "line", "scatter", "pie", "table"],
-                index=["auto", "bar", "line", "scatter", "pie", "table"].index(st.session_state.viz_type)
-            )
-            if viz_type != st.session_state.viz_type:
-                st.session_state.viz_type = viz_type
     
     # Chat History Management
     st.header("Chat History")
@@ -253,12 +224,6 @@ with st.sidebar:
                     st.write(f"- k_value: {metadata.get('k_value', 'N/A')}")
                     st.write(f"- chunk_size: {metadata.get('chunk_size', 'N/A')}")
                     st.write(f"- chunk_overlap: {metadata.get('chunk_overlap', 'N/A')}")
-                    
-                    # Show visualization settings if available
-                    if "viz_enabled" in metadata:
-                        st.write(f"**Visualization Enabled:** {metadata.get('viz_enabled', False)}")
-                    if "viz_type" in metadata:
-                        st.write(f"**Default Chart Type:** {metadata.get('viz_type', 'auto')}")
             
             # Button to load the selected session
             if st.button("Load Selected Session"):
@@ -279,15 +244,42 @@ with st.sidebar:
                             st.session_state.chunk_size = session_metadata["chunk_size"]
                         if "chunk_overlap" in session_metadata:
                             st.session_state.chunk_overlap = session_metadata["chunk_overlap"]
-                        if "viz_enabled" in session_metadata:
-                            st.session_state.viz_enabled = session_metadata["viz_enabled"]
-                        if "viz_type" in session_metadata:
-                            st.session_state.viz_type = session_metadata["viz_type"]
                     
                     st.success(f"Loaded chat session with {len(loaded_messages)} messages")
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("Failed to load chat session")
+            
+            # Add View Chat History button
+            if st.button("👁️ View Chat History"):
+                # Load the messages but don't change the current session
+                loaded_messages, _ = st.session_state.history_manager.load_chat_history(session_id)
+                if loaded_messages:
+                    # Create a modal-like effect with an expander
+                    with st.expander(f"Chat History for {session_id}", expanded=True):
+                        st.subheader(f"Chat History ({len(loaded_messages)} messages)")
+                        
+                        # Create a container to display the messages
+                        chat_container = st.container()
+                        
+                        with chat_container:
+                            # Display each message in the history
+                            for msg in loaded_messages:
+                                role = msg.get("role", "unknown")
+                                content = msg.get("content", "")
+                                time = msg.get("timestamp", "")
+                                
+                                # Display with appropriate styling
+                                if role == "user":
+                                    st.markdown(f"**User** ({time}):")
+                                    st.markdown(f"> {content}")
+                                elif role == "assistant":
+                                    st.markdown(f"**Assistant** ({time}):")
+                                    st.markdown(content)
+                                    
+                                st.markdown("---")
+                else:
+                    st.error("Failed to load chat history")
     
     # Add explicit save button
     if st.button("💾 Save Current Chat History"):
@@ -298,8 +290,6 @@ with st.sidebar:
                 "k_value": st.session_state.k_value,
                 "chunk_size": st.session_state.chunk_size,
                 "chunk_overlap": st.session_state.chunk_overlap,
-                "viz_enabled": st.session_state.viz_enabled,
-                "viz_type": st.session_state.viz_type,
                 "files_processed": list(st.session_state.csv_chatbot.file_metadata.keys()) if hasattr(st.session_state.csv_chatbot, 'file_metadata') else []
             }
             
@@ -323,7 +313,7 @@ with st.sidebar:
         # Clear messages
         st.session_state.csv_messages = []
         st.success("Started a new chat session")
-        st.experimental_rerun()
+        st.rerun()
     
     # Status information
     if hasattr(st.session_state.csv_chatbot, 'vectorstore') and st.session_state.csv_chatbot.vectorstore:
@@ -341,8 +331,6 @@ with st.sidebar:
                 "k_value": st.session_state.k_value,
                 "chunk_size": st.session_state.chunk_size,
                 "chunk_overlap": st.session_state.chunk_overlap,
-                "viz_enabled": st.session_state.viz_enabled,
-                "viz_type": st.session_state.viz_type,
                 "files_processed": list(st.session_state.csv_chatbot.file_metadata.keys()) if hasattr(st.session_state.csv_chatbot, 'file_metadata') else []
             }
             st.session_state.history_manager.save_chat_history(
@@ -365,8 +353,6 @@ with st.sidebar:
                 "k_value": st.session_state.k_value,
                 "chunk_size": st.session_state.chunk_size,
                 "chunk_overlap": st.session_state.chunk_overlap,
-                "viz_enabled": st.session_state.viz_enabled,
-                "viz_type": st.session_state.viz_type,
                 "files_processed": list(st.session_state.csv_chatbot.file_metadata.keys()) if hasattr(st.session_state.csv_chatbot, 'file_metadata') else []
             }
             st.session_state.history_manager.save_chat_history(
@@ -386,8 +372,8 @@ with st.sidebar:
     if not os.getenv("OPENAI_API_KEY"):
         st.warning("Please set your OpenAI API key in a .env file or as an environment variable.")
 
-# Display current session info
-st.caption(f"Current Session ID: {st.session_state.csv_session_id}")
+    # Display current session info
+    st.caption(f"Current Session ID: {st.session_state.csv_session_id}")
 
 # Display example prompts
 st.subheader("Example Questions")
@@ -453,13 +439,6 @@ for message in st.session_state.csv_messages:
                     st.caption(f"- k_value: {params.get('k_value', 'N/A')}")
                     st.caption(f"- chunk_size: {params.get('chunk_size', 'N/A')}")
                     st.caption(f"- chunk_overlap: {params.get('chunk_overlap', 'N/A')}")
-                
-                # Show visualization settings if available
-                if "viz_settings" in message:
-                    st.caption("**Visualization Settings**:")
-                    viz = message["viz_settings"]
-                    st.caption(f"- Enabled: {viz.get('enabled', 'N/A')}")
-                    st.caption(f"- Chart Type: {viz.get('type', 'N/A')}")
 
 # Chat input
 if prompt := st.chat_input("Ask a question about your CSV data"):
@@ -487,23 +466,13 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
                     # Get current model information
                     current_model = st.session_state.get("model_name", "gpt-3.5-turbo")
                     
-                    # Check if visualization is requested
-                    viz_keywords = ["chart", "plot", "graph", "visualize", "visualization", "show", "display"]
-                    is_viz_query = any(keyword in prompt.lower() for keyword in viz_keywords)
-                    viz_enabled = st.session_state.get("viz_enabled", False)
-                    
                     if st.session_state.debug_mode:
                         response = st.session_state.csv_chatbot.ask(prompt, return_context=True)
                         
                         # Create tabs for answer and debugging info
-                        if is_viz_query and viz_enabled:
-                            answer_tab, viz_tab, context_tab, metrics_tab = st.tabs([
-                                "Answer", "Visualization", "Retrieved Context", "RAG Metrics"
-                            ])
-                        else:
-                            answer_tab, context_tab, metrics_tab = st.tabs([
-                                "Answer", "Retrieved Context", "RAG Metrics"
-                            ])
+                        answer_tab, context_tab, metrics_tab = st.tabs([
+                            "Answer", "Retrieved Context", "RAG Metrics"
+                        ])
                         
                         with answer_tab:
                             if isinstance(response, dict) and "answer" in response:
@@ -516,61 +485,6 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
                                 
                                 # Store the response for chat history
                                 answer_text = str(response)
-                        
-                        # If visualization is enabled and requested
-                        if is_viz_query and viz_enabled and isinstance(response, dict) and "answer" in response:
-                            # Try to extract data from the chatbot
-                            if hasattr(st.session_state.csv_chatbot, 'data_frames') and st.session_state.csv_chatbot.data_frames:
-                                with viz_tab:
-                                    # Use the first dataframe for now
-                                    df_key = list(st.session_state.csv_chatbot.data_frames.keys())[0]
-                                    df = st.session_state.csv_chatbot.data_frames[df_key]
-                                    
-                                    # Try to create an automatic visualization
-                                    viz_type = st.session_state.get("viz_type", "auto")
-                                    
-                                    if viz_type == "auto":
-                                        # Auto-detect the best chart type
-                                        numeric_cols = df.select_dtypes(include=['number']).columns
-                                        categorical_cols = df.select_dtypes(include=['object']).columns
-                                        
-                                        if len(numeric_cols) >= 2:
-                                            fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1], title=f"Scatter Plot: {numeric_cols[0]} vs {numeric_cols[1]}")
-                                            st.plotly_chart(fig, use_container_width=True)
-                                        elif len(numeric_cols) == 1 and len(categorical_cols) >= 1:
-                                            fig = px.bar(df, x=categorical_cols[0], y=numeric_cols[0], title=f"Bar Chart: {numeric_cols[0]} by {categorical_cols[0]}")
-                                            st.plotly_chart(fig, use_container_width=True)
-                                        else:
-                                            st.write("Could not automatically determine the best visualization. Here's the data:")
-                                            st.dataframe(df.head(10))
-                                    elif viz_type == "bar" and len(df.columns) >= 2:
-                                        # Find a categorical and numeric column
-                                        categorical_col = df.select_dtypes(include=['object']).columns[0] if len(df.select_dtypes(include=['object']).columns) > 0 else df.columns[0]
-                                        numeric_col = df.select_dtypes(include=['number']).columns[0] if len(df.select_dtypes(include=['number']).columns) > 0 else df.columns[1]
-                                        fig = px.bar(df, x=categorical_col, y=numeric_col, title=f"Bar Chart: {numeric_col} by {categorical_col}")
-                                        st.plotly_chart(fig, use_container_width=True)
-                                    elif viz_type == "line" and len(df.columns) >= 2:
-                                        # Assume first column is x-axis
-                                        fig = px.line(df, x=df.columns[0], y=df.columns[1], title=f"Line Chart: {df.columns[1]} over {df.columns[0]}")
-                                        st.plotly_chart(fig, use_container_width=True)
-                                    elif viz_type == "scatter" and len(df.columns) >= 2:
-                                        numeric_cols = df.select_dtypes(include=['number']).columns
-                                        if len(numeric_cols) >= 2:
-                                            fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1], title=f"Scatter Plot: {numeric_cols[0]} vs {numeric_cols[1]}")
-                                            st.plotly_chart(fig, use_container_width=True)
-                                        else:
-                                            st.write("Not enough numeric columns for scatter plot. Here's the data:")
-                                            st.dataframe(df.head(10))
-                                    elif viz_type == "pie" and len(df.columns) >= 2:
-                                        # Find a categorical and numeric column
-                                        categorical_col = df.select_dtypes(include=['object']).columns[0] if len(df.select_dtypes(include=['object']).columns) > 0 else df.columns[0]
-                                        numeric_col = df.select_dtypes(include=['number']).columns[0] if len(df.select_dtypes(include=['number']).columns) > 0 else df.columns[1]
-                                        fig = px.pie(df, names=categorical_col, values=numeric_col, title=f"Pie Chart: {numeric_col} by {categorical_col}")
-                                        st.plotly_chart(fig, use_container_width=True)
-                                    else:
-                                        # Default to table view
-                                        st.write("Showing data table:")
-                                        st.dataframe(df.head(10))
                         
                         with context_tab:
                             if isinstance(response, dict) and "retrieved_context" in response:
@@ -590,9 +504,7 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
                                 "k_value": st.session_state.k_value,
                                 "chunk_size": st.session_state.chunk_size,
                                 "chunk_overlap": st.session_state.chunk_overlap,
-                                "model": st.session_state.model_name,
-                                "viz_enabled": st.session_state.viz_enabled,
-                                "viz_type": st.session_state.viz_type
+                                "model": st.session_state.model_name
                             })
                             
                             # Retrieved chunks stats
@@ -613,36 +525,7 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
                     else:
                         # Regular mode, just show the answer
                         answer_text = st.session_state.csv_chatbot.ask(prompt)
-                        
-                        # Add visualization if requested
-                        if is_viz_query and viz_enabled and hasattr(st.session_state.csv_chatbot, 'data_frames') and st.session_state.csv_chatbot.data_frames:
-                            # Display the answer
-                            st.markdown(answer_text)
-                            
-                            # Location: pages/2_CSV_RAG.py (continued)
-
-                            # Try to create a basic visualization
-                            st.subheader("Visualization")
-                            df_key = list(st.session_state.csv_chatbot.data_frames.keys())[0]
-                            df = st.session_state.csv_chatbot.data_frames[df_key]
-                            
-                            # Choose a simple visualization type based on data
-                            numeric_cols = df.select_dtypes(include=['number']).columns
-                            if len(numeric_cols) >= 2:
-                                fig = px.scatter(df, x=numeric_cols[0], y=numeric_cols[1], title=f"Scatter Plot: {numeric_cols[0]} vs {numeric_cols[1]}")
-                                st.plotly_chart(fig, use_container_width=True)
-                            elif len(df.columns) >= 2:
-                                try:
-                                    categorical_col = df.select_dtypes(include=['object']).columns[0] if len(df.select_dtypes(include=['object']).columns) > 0 else df.columns[0]
-                                    numeric_col = df.select_dtypes(include=['number']).columns[0] if len(df.select_dtypes(include=['number']).columns) > 0 else df.columns[1]
-                                    fig = px.bar(df, x=categorical_col, y=numeric_col, title=f"Bar Chart: {numeric_col} by {categorical_col}")
-                                    st.plotly_chart(fig, use_container_width=True)
-                                except:
-                                    st.dataframe(df.head(10))
-                            else:
-                                st.dataframe(df.head(10))
-                        else:
-                            st.markdown(answer_text)
+                        st.markdown(answer_text)
             except Exception as e:
                 answer_text = f"An error occurred: {str(e)}"
                 st.error(answer_text)
@@ -657,10 +540,6 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
             "k_value": st.session_state.k_value,
             "chunk_size": st.session_state.chunk_size,
             "chunk_overlap": st.session_state.chunk_overlap
-        },
-        "viz_settings": {
-            "enabled": st.session_state.viz_enabled,
-            "type": st.session_state.viz_type
         }
     }
     st.session_state.csv_messages.append(assistant_message)
@@ -671,8 +550,6 @@ if prompt := st.chat_input("Ask a question about your CSV data"):
         "k_value": st.session_state.k_value,
         "chunk_size": st.session_state.chunk_size,
         "chunk_overlap": st.session_state.chunk_overlap,
-        "viz_enabled": st.session_state.viz_enabled,
-        "viz_type": st.session_state.viz_type,
         "files_processed": list(st.session_state.csv_chatbot.file_metadata.keys()) if hasattr(st.session_state.csv_chatbot, 'file_metadata') else []
     }
     

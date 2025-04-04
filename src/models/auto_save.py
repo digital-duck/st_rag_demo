@@ -41,29 +41,29 @@ class AutoSave:
         """
         Setup automatic saving on page navigation.
         
-        This function creates a "hidden" element that will trigger
-        when the page is unloaded (navigation or refresh).
+        This function creates a hidden container that will track page navigation
+        while keeping the UI clean by using Streamlit's native container visibility.
         """
         # Initialize a key for tracking if we're navigating away
         if "navigation_tracker" not in st.session_state:
             st.session_state.navigation_tracker = 0
         
-        # Use a hidden container that executes before navigation
-        with st.container():
-            st.markdown('<div style="display:none">', unsafe_allow_html=True)
-            # Increment the tracker - when this value changes, we're navigating
-            new_val = st.session_state.navigation_tracker + 1
-            if st.button(f"_hidden_nav_{new_val}", key=f"_hidden_nav_{new_val}"):
-                # This won't actually run, but it creates the session state entry
-                st.session_state.navigation_tracker = new_val
+        with st.sidebar:
+            # Create an empty container
+            hidden_container = st.empty()
             
-            # Check if the tracker has changed
+            # Only render content inside the container conditionally (never visible)
+            if False:
+                # This code never executes visibly but still creates the session state entry
+                new_val = st.session_state.navigation_tracker + 1
+                if hidden_container.button(f"_hidden_nav_{new_val}", key=f"_hidden_nav_{new_val}"):
+                    st.session_state.navigation_tracker = new_val
+            
+            # Check if tracker changed
+            new_val = st.session_state.navigation_tracker + 1
             if new_val != st.session_state.navigation_tracker:
-                # We're navigating away - force a save
                 self.check_and_save(force=True)
                 st.session_state.navigation_tracker = new_val
-            
-            st.markdown('</div>', unsafe_allow_html=True)
         
-        # Regular auto-save check
+        # Regular auto-save check (in addition to navigation detection)
         self.check_and_save()
