@@ -1,0 +1,31 @@
+{
+  "session_id": "csv_c3e01592",
+  "rag_type": "csv",
+  "last_updated": "2025-04-04T18:28:12.243094",
+  "message_count": 2,
+  "messages": [
+    {
+      "role": "user",
+      "content": "what is codebasics",
+      "timestamp": "2025-04-04T18:28:10.857155"
+    },
+    {
+      "role": "assistant",
+      "content": "Codebasics is an educational platform that offers courses and bootcamps in the field of IT/Data Analytics. It is specifically designed for beginners with no prior experience in the field. The platform has benefited over 9000 learners, and you can check reviews and connect with past learners on LinkedIn to get direct feedback. The courses are focused on helping individuals build a career in IT/Data Analytics or improve their performance in their current job or business using data. The only prerequisite for taking the bootcamp is to have a functional laptop with at least 4GB RAM, an internet connection, and a willingness to learn data analysis.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T18:28:12.242720",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": []
+  }
+}

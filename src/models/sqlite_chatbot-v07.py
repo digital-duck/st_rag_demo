@@ -30,86 +30,10 @@ class SQLiteChatbot(DocumentChatbot):
         self.sqlite_persist_dir = os.path.join(os.getcwd(), "data", "sqlite_data")
         os.makedirs(self.sqlite_persist_dir, exist_ok=True)
 
-    def load_database(self, file_path, file_name):
-        """Load a previously processed database by its path with thread safety"""
-        try:
-            # Store the path for later use in thread-safe connections
-            self.db_path = file_path
-            
-            # Create a thread-local connection for initial setup
-            thread_conn = sqlite3.connect(file_path)
-            
-            try:
-                # Get list of tables
-                cursor = thread_conn.cursor()
-                cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-                tables = cursor.fetchall()
-                
-                # Get schema for each table
-                table_info = {}
-                for table in tables:
-                    table_name = table[0]
-                    cursor.execute(f"PRAGMA table_info({table_name});")
-                    columns = cursor.fetchall()
-                    
-                    # Get sample data (first 5 rows)
-                    cursor.execute(f"SELECT * FROM {table_name} LIMIT 5;")
-                    sample_data = cursor.fetchall()
-                    
-                    # Get row count
-                    cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
-                    row_count = cursor.fetchone()[0]
-                    
-                    # Store table info
-                    table_info[table_name] = {
-                        "columns": columns,
-                        "sample_data": sample_data,
-                        "row_count": row_count
-                    }
-                
-                # Store table info for later use
-                self.table_info = table_info
-                
-                # Create a LangChain SQLDatabase object
-                # This will create its own connections when needed
-                self.sql_database = SQLDatabase.from_uri(f"sqlite:///{file_path}")
-                
-                # Create database schema metadata
-                db_metadata = self._create_database_metadata(file_name, table_info)
-                
-                # Add to file metadata
-                self.file_metadata[file_name] = db_metadata
-                
-                # Get a unique identifier for this database to use in the persist directory
-                db_id = hashlib.md5(file_name.encode()).hexdigest()[:10]
-                vector_persist_dir = os.path.join(self.sqlite_persist_dir, f"vectors_{db_id}")
-                
-                # Load the persisted vectorstore if it exists
-                if os.path.exists(vector_persist_dir) and os.path.isdir(vector_persist_dir):
-                    self.vectorstore = Chroma(
-                        persist_directory=vector_persist_dir,
-                        embedding_function=self.embeddings
-                    )
-                    return len(tables)
-                else:
-                    # If vectorstore doesn't exist, recreate it
-                    self._generate_schema_documents(file_name, table_info, db_metadata)
-                    self._build_and_persist_vectorstore(vector_persist_dir)
-                    return len(tables)
-            finally:
-                # Always close the thread-local connection
-                if thread_conn:
-                    thread_conn.close()
-                
-        except Exception as e:
-            st.error(f"Error loading database: {str(e)}")
-            return 0
-
     def process_sqlite(self, file):
         """
         Process a SQLite database file and set up SQL database connection.
         Only schema information is vectorized, not the actual data rows.
-        Uses thread-safe connection handling.
         """
         try:
             # Generate a consistent filename based on the hash of the file content
@@ -130,46 +54,40 @@ class SQLiteChatbot(DocumentChatbot):
                     f.write(file_content)
                 self.db_path = persistent_db_path
             
-            # Create a thread-local connection for setup
-            thread_conn = sqlite3.connect(self.db_path)
+            # Connect to the database
+            self.db_connection = sqlite3.connect(self.db_path)
             
-            try:
-                # Get list of tables
-                cursor = thread_conn.cursor()
-                cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-                tables = cursor.fetchall()
+            # Get list of tables
+            cursor = self.db_connection.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = cursor.fetchall()
+            
+            # Get schema for each table
+            table_info = {}
+            for table in tables:
+                table_name = table[0]
+                cursor.execute(f"PRAGMA table_info({table_name});")
+                columns = cursor.fetchall()
                 
-                # Get schema for each table
-                table_info = {}
-                for table in tables:
-                    table_name = table[0]
-                    cursor.execute(f"PRAGMA table_info({table_name});")
-                    columns = cursor.fetchall()
-                    
-                    # Get sample data (first 5 rows)
-                    cursor.execute(f"SELECT * FROM {table_name} LIMIT 5;")
-                    sample_data = cursor.fetchall()
-                    
-                    # Get row count
-                    cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
-                    row_count = cursor.fetchone()[0]
-                    
-                    # Store table info
-                    table_info[table_name] = {
-                        "columns": columns,
-                        "sample_data": sample_data,
-                        "row_count": row_count
-                    }
-            finally:
-                # Always close the thread-local connection
-                if thread_conn:
-                    thread_conn.close()
+                # Get sample data (first 5 rows)
+                cursor.execute(f"SELECT * FROM {table_name} LIMIT 5;")
+                sample_data = cursor.fetchall()
+                
+                # Get row count
+                cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
+                row_count = cursor.fetchone()[0]
+                
+                # Store table info
+                table_info[table_name] = {
+                    "columns": columns,
+                    "sample_data": sample_data,
+                    "row_count": row_count
+                }
             
             # Store table info for later use
             self.table_info = table_info
             
             # Create a LangChain SQLDatabase object
-            # This creates its own connections as needed
             self.sql_database = SQLDatabase.from_uri(f"sqlite:///{self.db_path}")
             
             # Create database schema metadata
@@ -193,9 +111,12 @@ class SQLiteChatbot(DocumentChatbot):
             
         except Exception as e:
             st.error(f"Error processing SQLite file: {str(e)}")
+            if self.db_connection:
+                self.db_connection.close()
+            if os.path.exists(self.db_path):
+                # Don't delete the file - keep it for persistence
+                pass
             return 0
-
-
 
     def _build_and_persist_vectorstore(self, persist_dir):
         """Build and persist the vectorstore to disk"""
@@ -231,6 +152,74 @@ class SQLiteChatbot(DocumentChatbot):
             st.error(f"Error building vector database: {str(e)}")
             return False
 
+    def load_database(self, file_path, file_name):
+        """Load a previously processed database by its path"""
+        try:
+            # Connect to the database
+            self.db_path = file_path
+            self.db_connection = sqlite3.connect(file_path)
+            
+            # Get list of tables
+            cursor = self.db_connection.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = cursor.fetchall()
+            
+            # Get schema for each table
+            table_info = {}
+            for table in tables:
+                table_name = table[0]
+                cursor.execute(f"PRAGMA table_info({table_name});")
+                columns = cursor.fetchall()
+                
+                # Get sample data (first 5 rows)
+                cursor.execute(f"SELECT * FROM {table_name} LIMIT 5;")
+                sample_data = cursor.fetchall()
+                
+                # Get row count
+                cursor.execute(f"SELECT COUNT(*) FROM {table_name};")
+                row_count = cursor.fetchone()[0]
+                
+                # Store table info
+                table_info[table_name] = {
+                    "columns": columns,
+                    "sample_data": sample_data,
+                    "row_count": row_count
+                }
+            
+            # Store table info for later use
+            self.table_info = table_info
+            
+            # Create a LangChain SQLDatabase object
+            self.sql_database = SQLDatabase.from_uri(f"sqlite:///{file_path}")
+            
+            # Create database schema metadata
+            db_metadata = self._create_database_metadata(file_name, table_info)
+            
+            # Add to file metadata
+            self.file_metadata[file_name] = db_metadata
+            
+            # Get a unique identifier for this database to use in the persist directory
+            db_id = hashlib.md5(file_name.encode()).hexdigest()[:10]
+            vector_persist_dir = os.path.join(self.sqlite_persist_dir, f"vectors_{db_id}")
+            
+            # Load the persisted vectorstore if it exists
+            if os.path.exists(vector_persist_dir) and os.path.isdir(vector_persist_dir):
+                self.vectorstore = Chroma(
+                    persist_directory=vector_persist_dir,
+                    embedding_function=self.embeddings
+                )
+                return len(tables)
+            else:
+                # If vectorstore doesn't exist, recreate it
+                self._generate_schema_documents(file_name, table_info, db_metadata)
+                self._build_and_persist_vectorstore(vector_persist_dir)
+                return len(tables)
+                
+        except Exception as e:
+            st.error(f"Error loading database: {str(e)}")
+            if self.db_connection:
+                self.db_connection.close()
+            return 0
 
     def clear(self):
         """Clear all documents and reset the chatbot"""
@@ -379,56 +368,37 @@ class SQLiteChatbot(DocumentChatbot):
     
 
     def execute_sql_query(self, query):
-        """Execute a SQL query on the connected database with thread safety"""
-        if not self.db_path:
+        """Execute a SQL query on the connected database"""
+        if not self.db_connection:
             return "No database connected. Please upload a SQLite database file."
         
         try:
-            # Create a new connection in the current thread
-            # This is necessary because SQLite connections are thread-local
-            # and cannot be shared between threads
-            conn = sqlite3.connect(self.db_path)
+            # Execute the query
+            cursor = self.db_connection.cursor()
+            cursor.execute(query)
             
-            try:
-                # Execute the query
-                cursor = conn.cursor()
-                cursor.execute(query)
+            # Check if it's a SELECT query
+            if query.strip().upper().startswith("SELECT"):
+                # Fetch all results
+                results = cursor.fetchall()
                 
-                # Check if it's a SELECT query
-                if query.strip().upper().startswith("SELECT"):
-                    # Fetch all results
-                    results = cursor.fetchall()
-                    
-                    # Get column names
-                    column_names = [description[0] for description in cursor.description]
-                    
-                    # Return as DataFrame
-                    df = pd.DataFrame(results, columns=column_names)
-                    
-                    # Store for visualization
-                    self.last_query_results = df
-                    
-                    # Close this thread's connection
-                    conn.close()
-                    
-                    return df
-                else:
-                    # For non-SELECT queries, commit and return affected row count
-                    conn.commit()
-                    rowcount = cursor.rowcount
-                    
-                    # Close this thread's connection
-                    conn.close()
-                    
-                    return f"Query executed successfully. Rows affected: {rowcount}"
-            finally:
-                # Ensure connection is closed even if an error occurs
-                if conn:
-                    conn.close()
-                    
+                # Get column names
+                column_names = [description[0] for description in cursor.description]
+                
+                # Return as DataFrame
+                df = pd.DataFrame(results, columns=column_names)
+                
+                # Store for visualization
+                self.last_query_results = df
+                
+                return df
+            else:
+                # For non-SELECT queries, commit and return affected row count
+                self.db_connection.commit()
+                return f"Query executed successfully. Rows affected: {cursor.rowcount}"
+                
         except Exception as e:
             return f"Error executing query: {str(e)}"
-    
     
     def generate_sql_query(self, question):
         """Generate a SQL query based on a natural language question"""
@@ -510,8 +480,8 @@ class SQLiteChatbot(DocumentChatbot):
             str or dict: Response or dict with additional info
         """
         try:
-            # Check if database is connected using db_path instead of db_connection
-            if not self.db_path or not self.sql_database:
+            # Check if database is connected
+            if not self.db_connection or not self.sql_database:
                 error_msg = "Please upload and process a SQLite database file first."
                 if return_context:
                     return {
@@ -629,4 +599,4 @@ class SQLiteChatbot(DocumentChatbot):
                     "formatted_prompt": ""
                 }
             return error_msg
-    
+        

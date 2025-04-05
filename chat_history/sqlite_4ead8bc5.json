@@ -1,0 +1,44 @@
+{
+  "session_id": "sqlite_4ead8bc5",
+  "rag_type": "sqlite",
+  "last_updated": "2025-04-04T22:11:05.128877",
+  "message_count": 4,
+  "messages": [
+    {
+      "role": "user",
+      "content": "what tables are in this database",
+      "timestamp": "2025-04-04T22:04:13.279220"
+    },
+    {
+      "role": "user",
+      "content": "find top 5 customers by order amount",
+      "timestamp": "2025-04-04T22:04:29.536065"
+    },
+    {
+      "role": "user",
+      "content": "find top 5 customers by order amount",
+      "timestamp": "2025-04-04T22:11:03.928018"
+    },
+    {
+      "role": "assistant",
+      "content": "I've executed the following SQL query based on your question:\n\n```sql\nSELECT c.CustomerId, c.FirstName, c.LastName, SUM(i.Total) AS TotalAmount\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nGROUP BY c.CustomerId\nORDER BY TotalAmount DESC\nLIMIT 5;\n```\n\nResult: Error executing query: SQLite objects created in a thread can only be used in that same thread. The object was created in thread id 137500647491136 and this is thread id 137500467136064.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T22:11:05.128702",
+      "query": "SELECT c.CustomerId, c.FirstName, c.LastName, SUM(i.Total) AS TotalAmount\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nGROUP BY c.CustomerId\nORDER BY TotalAmount DESC\nLIMIT 5;",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": [
+      "chinook.sqlite3"
+    ]
+  }
+}

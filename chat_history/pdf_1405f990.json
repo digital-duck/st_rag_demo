@@ -1,0 +1,31 @@
+{
+  "session_id": "pdf_1405f990",
+  "rag_type": "pdf",
+  "last_updated": "2025-04-04T18:27:57.650434",
+  "message_count": 2,
+  "messages": [
+    {
+      "role": "user",
+      "content": "write me a dinner with thai recipe",
+      "timestamp": "2025-04-04T18:27:53.772451"
+    },
+    {
+      "role": "assistant",
+      "content": "For a delicious Thai dinner, you can prepare the following menu:\n\nAppetizer:\nSpicy Beef Glass Noodles Salad\n\nIngredients:\n- 100 grams grilled beef\n- 20 grams dried shrimps, fried until crispy\n- 4 cloves garlic, minced\n- 1 onion, julienned\n- 2-3 Thai chilies, sliced thinly\n- 2 stalks Thai celery, chopped\n- 2 tbsp fish sauce\n- 2 tbsp lime juice\n- 5 cherry tomatoes, halved\n- 1 tbsp chopped coriander\n- 4 tsp chicken stock\n- 5 leaves coriander\n\nMain Course:\nGaeng Som Phak Ruam (Sour Curry with Mixed Vegetables)\n\nIngredients:\n- 5 peeled Thai shrimps\n- 80 grams long beans, chopped into one inch pieces\n- 80 grams cauliflower, cut into bite-size pieces\n- 100 grams cabbage, chopped into two-inch cubes\n- 40 grams Gaeng Som paste\n- 500 grams vegetable stock or water\n- 4 tbsp tamarind juice\n- 15 grams palm sugar\n- 2 tbsp fish sauce\n\nDirections:\n1. Clean the shrimps thoroughly and devein them. Bring the vegetable stock (or water) to a boil and add Gaeng Som paste.\n2. When the soup returns to a full boil, add vegetables in this order: cauliflower, long beans, and cabbage.\n3. Season with palm sugar, tamarind juice, and fish sauce, making sure everything is well dissolved.\n4. Add shrimps and cook briefly.\n\nServe the Spicy Beef Glass Noodles Salad as an appetizer and the Gaeng Som Phak Ruam as the main course for a flavorful and authentic Thai dinner experience. Enjoy!",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T18:27:57.650196",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": []
+  }
+}

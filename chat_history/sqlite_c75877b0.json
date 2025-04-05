@@ -1,0 +1,65 @@
+{
+  "session_id": "sqlite_c75877b0",
+  "rag_type": "sqlite",
+  "last_updated": "2025-04-04T22:30:25.405373",
+  "message_count": 6,
+  "messages": [
+    {
+      "role": "user",
+      "content": "find top 5 customers by orders",
+      "timestamp": "2025-04-04T22:25:03.859461"
+    },
+    {
+      "role": "assistant",
+      "content": "Please upload and process a SQLite database file first.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T22:25:03.860987",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    },
+    {
+      "role": "user",
+      "content": "find top 5 customers by orders",
+      "timestamp": "2025-04-04T22:29:46.271209"
+    },
+    {
+      "role": "assistant",
+      "content": "Please upload and process a SQLite database file first.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T22:29:47.439484",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    },
+    {
+      "role": "user",
+      "content": "find top 5 customers by orders",
+      "timestamp": "2025-04-04T22:30:24.531277"
+    },
+    {
+      "role": "assistant",
+      "content": "Please upload and process a SQLite database file first.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T22:30:25.404706",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": [
+      "chinook.sqlite3"
+    ]
+  }
+}

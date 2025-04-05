@@ -3,7 +3,6 @@ import sys
 import streamlit as st
 import pandas as pd
 import uuid
-
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
@@ -234,22 +233,14 @@ def display_database_info():
     """Display information about the connected database"""
     if hasattr(st.session_state.sqlite_chatbot, 'db_connection') and st.session_state.sqlite_chatbot.db_connection is not None:
         st.subheader("Connected Database")
-        
-        # Create tabs instead of nested expanders
-        all_tables = list(st.session_state.sqlite_chatbot.table_info.keys())
-        if all_tables:
-            tabs = st.tabs(all_tables)
-            
-            # Display info for each table in its own tab
-            for i, table_name in enumerate(all_tables):
-                info = st.session_state.sqlite_chatbot.table_info[table_name]
-                with tabs[i]:
-                    st.write(f"**{table_name}** ({info['row_count']} rows)")
-                    cols = ", ".join([f"{col[1]} ({col[2]})" for col in info['columns']])
-                    st.write(f"Columns: {cols}")
-                    
-                    # Show sample data directly (no nested expander)
-                    st.write("Sample data:")
+        with st.expander("Database Tables", expanded=False):
+            for table_name, info in st.session_state.sqlite_chatbot.table_info.items():
+                st.write(f"**{table_name}** ({info['row_count']} rows)")
+                cols = ", ".join([f"{col[1]} ({col[2]})" for col in info['columns']])
+                st.write(f"Columns: {cols}")
+                
+                # Add option to show sample data
+                with st.expander(f"Sample data from {table_name}", expanded=False):
                     # Convert sample data to DataFrame for better display
                     columns = [col[1] for col in info['columns']]
                     sample_df = pd.DataFrame(info['sample_data'], columns=columns)
@@ -283,36 +274,7 @@ def display_sidebar():
         st.caption(f"Current Session ID: {st.session_state.sqlite_session_id}")
 
 def handle_file_upload():
-    """Handle file upload and database selection in the sidebar"""
-    # First check if there are any previously processed databases
-    available_dbs = st.session_state.sqlite_chatbot.get_available_databases()
-    
-    if available_dbs:
-        st.write("Previously processed databases:")
-        
-        # Create a radio button for each available database
-        db_options = ["Upload new database"] + [db["name"] for db in available_dbs]
-        selected_option = st.radio("Select a database", db_options)
-        
-        if selected_option != "Upload new database":
-            # User selected a previously processed database
-            selected_db = next((db for db in available_dbs if db["name"] == selected_option), None)
-            
-            if selected_db and st.button(f"Load {selected_db['name']}"):
-                with st.spinner(f"Loading {selected_db['name']}..."):
-                    table_count = st.session_state.sqlite_chatbot.load_database(
-                        selected_db["path"], 
-                        selected_db["name"]
-                    )
-                    if table_count > 0:
-                        st.success(f"Successfully loaded database with {table_count} tables!")
-                    else:
-                        st.error("Error loading database.")
-            
-            # Early return if user selected an existing database
-            return
-    
-    # Regular file upload UI
+    """Handle file upload in the sidebar"""
     uploaded_files = st.file_uploader(
         "Upload SQLite database files", 
         type=["db", "sqlite", "sqlite3"], 
@@ -335,7 +297,11 @@ def handle_file_upload():
                     table_count += count
                 
                 if table_count > 0:
-                    st.success(f"Successfully processed {table_count} tables into document chunks!")
+                    with st.spinner("Building vector database..."):
+                        if st.session_state.sqlite_chatbot.build_vectorstore():
+                            st.success(f"Successfully processed {table_count} tables into document chunks!")
+                        else:
+                            st.error("Error building the vector database.")
                 else:
                     st.warning("No database tables were processed.")
 
@@ -471,14 +437,14 @@ def handle_chat_history():
 
 def handle_action_buttons():
     """Display and handle action buttons in the sidebar"""
-    # Status information - check vector database
+    # Status information
     if hasattr(st.session_state.sqlite_chatbot, 'vectorstore') and st.session_state.sqlite_chatbot.vectorstore:
         st.success("✅ Vector database is ready")
     else:
         st.warning("⚠️ No vector database available. Please upload and process files.")
     
-    # Database connection status - check db_path instead of db_connection
-    if hasattr(st.session_state.sqlite_chatbot, 'db_path') and st.session_state.sqlite_chatbot.db_path:
+    # Database connection status
+    if hasattr(st.session_state.sqlite_chatbot, 'db_connection') and st.session_state.sqlite_chatbot.db_connection is not None:
         st.success("✅ SQLite database is connected")
     else:
         st.warning("⚠️ No SQLite database connected. Please upload and process files.")
@@ -532,7 +498,6 @@ def handle_action_buttons():
         # Clear the display
         st.session_state.sqlite_messages = []
         st.success("All data cleared! Your chat history has been saved and can be loaded again.")
-
 
 def display_example_questions():
     """Display example question buttons"""
@@ -730,12 +695,7 @@ def handle_chat_input():
     """Handle the chat input and generate responses"""
     if prompt := st.chat_input("Ask a question about your SQLite data"):
         # Add user message to chat history
-        user_message = {
-            "role": "user", 
-            "content": prompt,
-            "timestamp": datetime.now().isoformat()
-        }
-        st.session_state.sqlite_messages.append(user_message)
+        add_user_message(prompt)
         
         # Display user message
         with st.chat_message("user"):
@@ -744,16 +704,16 @@ def handle_chat_input():
         # Generate and display assistant response
         process_chat_message(prompt)
         
-        # No rerun here as it can interrupt the processing
-        # The save_current_chat_history function will be called by add_assistant_message
+        # Rerun to update the UI
+        st.rerun()
 
 def process_chat_message(prompt):
     """Process a chat message and generate a response"""
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
-                # Check if database is connected - use db_path instead of db_connection
-                if not hasattr(st.session_state.sqlite_chatbot, 'db_path') or not st.session_state.sqlite_chatbot.db_path:
+                # Check if database is connected
+                if not hasattr(st.session_state.sqlite_chatbot, 'db_connection') or st.session_state.sqlite_chatbot.db_connection is None:
                     answer_text = "Please upload and process a SQLite database file first."
                     st.warning(answer_text)
                     add_assistant_message(answer_text)
@@ -766,161 +726,17 @@ def process_chat_message(prompt):
                 viz_keywords = ["chart", "plot", "graph", "visualize", "visualization", "show", "display"]
                 is_viz_query = any(keyword in prompt.lower() for keyword in viz_keywords)
                 
-                # Add debug prints to troubleshoot
-                st.session_state.debug_info = {
-                    "prompt": prompt,
-                    "stage": "starting_processing",
-                    "db_path": st.session_state.sqlite_chatbot.db_path
-                }
-                
-                # Always try to generate SQL first for database questions
-                try:
-                    st.session_state.debug_info["stage"] = "generating_sql"
-                    # Generate SQL directly rather than using the ask method first
-                    generated_query = st.session_state.sqlite_chatbot.generate_sql_query(prompt)
-                    st.session_state.debug_info["generated_query"] = generated_query
-                    
-                    if not generated_query.startswith("Error"):
-                        st.session_state.debug_info["stage"] = "executing_query"
-                        # Execute the query
-                        query_result = st.session_state.sqlite_chatbot.execute_sql_query(generated_query)
-                        st.session_state.debug_info["query_result_type"] = str(type(query_result))
-                        
-                        if isinstance(query_result, pd.DataFrame):
-                            # Format the answer
-                            num_rows = len(query_result)
-                            answer = f"I've executed the following SQL query based on your question:\n\n```sql\n{generated_query}\n```\n\nThe query returned {num_rows} rows."
-                            
-                            if num_rows > 0 and num_rows <= 10:
-                                # Show the full result for small datasets
-                                answer += f"\n\nHere's the result:\n\n{query_result.to_markdown()}"
-                            elif num_rows > 10:
-                                # Show just a sample for larger datasets
-                                answer += f"\n\nHere's a sample of the results (first 5 rows):\n\n{query_result.head(5).to_markdown()}"
-                            
-                            # Display the answer
-                            st.markdown(answer)
-                            
-                            # Show the data in a well-formatted way
-                            st.dataframe(query_result)
-                            
-                            # If this is a viz query, create visualization
-                            if is_viz_query:
-                                viz_type = st.session_state.viz_type
-                                st.subheader("Visualization")
-                                fig = generate_visualization(query_result, chart_type=viz_type)
-                                if isinstance(fig, go.Figure):
-                                    st.plotly_chart(fig, use_container_width=True)
-                            
-                            # Add the assistant response to chat history
-                            response_with_data = {
-                                "answer": answer,
-                                "query": generated_query,
-                                "data": query_result,
-                                "query_type": "sql_execution"
-                            }
-                            add_assistant_response_with_context(response_with_data)
-                            return
-                        else:
-                            # Non-SELECT query result
-                            answer = f"I've executed the following SQL query based on your question:\n\n```sql\n{generated_query}\n```\n\nResult: {query_result}"
-                            st.markdown(answer)
-                            
-                            # Add the assistant response to chat history
-                            response_without_data = {
-                                "answer": answer,
-                                "query": generated_query,
-                                "query_type": "sql_execution"
-                            }
-                            add_assistant_response_with_context(response_without_data)
-                            return
-                    else:
-                        # SQL generation had an error, fall back to RAG
-                        st.session_state.debug_info["sql_error"] = generated_query
-                        st.session_state.debug_info["stage"] = "falling_back_to_rag"
-                
-                except Exception as sql_error:
-                    # Log the error but continue to RAG as fallback
-                    st.session_state.debug_info["sql_error"] = str(sql_error)
-                    st.session_state.debug_info["stage"] = "sql_error_falling_back_to_rag"
-                
-                # If we get here, either SQL generation failed or we're handling a general question
-                st.session_state.debug_info["stage"] = "processing_with_rag"
-                
-                # Debug mode has different display
+                # Process in debug mode if enabled
                 if st.session_state.debug_mode:
-                    st.session_state.debug_info["stage"] = "debug_mode_processing"
-                    response = st.session_state.sqlite_chatbot.ask(prompt, return_context=True)
-                    
-                    # Create tabs for answer and debugging info
-                    answer_tab, context_tab, metrics_tab, sql_tab = st.tabs([
-                        "Answer", "Retrieved Context", "RAG Metrics", "SQL Debug"
-                    ])
-                    
-                    with answer_tab:
-                        if isinstance(response, dict) and "answer" in response:
-                            st.markdown(response["answer"])
-                            answer_text = response["answer"]
-                        else:
-                            st.markdown(str(response))
-                            answer_text = str(response)
-                    
-                    with context_tab:
-                        if isinstance(response, dict) and "retrieved_context" in response:
-                            st.text_area("Retrieved Documents", 
-                                        response["retrieved_context"], 
-                                        height=400)
-                        else:
-                            st.text("No context retrieved for this query.")
-                    
-                    with metrics_tab:
-                        # Show RAG metrics and stats
-                        st.subheader("RAG Retrieval Metrics")
-                        st.json(st.session_state.debug_info)
-                    
-                    with sql_tab:
-                        st.subheader("SQL Debug Information")
-                        st.write("### Debug Info")
-                        st.json(st.session_state.debug_info)
-                        
-                        if "generated_query" in st.session_state.debug_info:
-                            st.write("### Generated SQL Query")
-                            st.code(st.session_state.debug_info["generated_query"], language="sql")
+                    process_debug_mode_response(prompt, is_viz_query)
                 else:
-                    # Regular mode - get response with RAG
-                    response = st.session_state.sqlite_chatbot.ask(prompt, return_context=True)
+                    process_regular_response(prompt, is_viz_query)
                     
-                    if isinstance(response, dict) and "answer" in response:
-                        st.markdown(response["answer"])
-                        
-                        # If there's query data, show it
-                        if "data" in response and isinstance(response["data"], pd.DataFrame):
-                            st.dataframe(response["data"])
-                            
-                            # Add visualization if requested
-                            if is_viz_query or ("query_type" in response and response["query_type"] == "visualization"):
-                                viz_type = st.session_state.viz_type
-                                st.subheader("Visualization")
-                                fig = generate_visualization(response["data"], chart_type=viz_type)
-                                if isinstance(fig, go.Figure):
-                                    st.plotly_chart(fig, use_container_width=True)
-                        
-                        answer_text = response["answer"]
-                    else:
-                        st.markdown(str(response))
-                        answer_text = str(response)
-                
-                # Add response to chat history
-                add_assistant_response_with_context(response)
-                
             except Exception as e:
-                # Capture the full error for debugging
-                import traceback
-                error_msg = f"An error occurred: {str(e)}\n\n{traceback.format_exc()}"
+                error_msg = f"An error occurred: {str(e)}"
                 st.error(error_msg)
                 add_assistant_message(error_msg)
 
-                
 def process_debug_mode_response(prompt, is_viz_query):
     """Process a response in debug mode with detailed information"""
     response = st.session_state.sqlite_chatbot.ask(prompt, return_context=True)
@@ -1116,107 +932,6 @@ def add_assistant_response_with_context(response):
     st.session_state.sqlite_messages.append(assistant_message)
     save_current_chat_history()
 
-def direct_sql_generation(question):
-    """Generate SQL directly using the LLM without going through complex chains"""
-    if not hasattr(st.session_state.sqlite_chatbot, 'sql_database'):
-        return "No database connected. Please upload a SQLite database file first."
-        
-    try:
-        # Get schema information
-        schema_info = st.session_state.sqlite_chatbot.sql_database.get_table_info()
-        
-        # Create a simple, direct prompt
-        prompt = f"""You are a SQL expert. Generate a SQL query for SQLite that answers this question:
-"{question}"
-
-Here's the database schema:
-{schema_info}
-
-Your SQL query (just return the query, no explanation):
-"""
-        
-        # Get the current model
-        model_name = st.session_state.get("model_name", "gpt-3.5-turbo")
-        
-        # Create messages list
-        messages = [
-            {"role": "system", "content": "You are an expert SQL query generator. Output only the SQL query with no explanation or markdown formatting."},
-            {"role": "user", "content": prompt}
-        ]
-        
-        # Create a ChatOpenAI instance
-        from langchain_openai import ChatOpenAI
-        llm = ChatOpenAI(
-            model=model_name,
-            temperature=0.1
-        )
-        
-        # Call the LLM directly
-        with st.spinner("Generating SQL query..."):
-            response = llm.invoke(messages)
-            
-        # Extract just the SQL query
-        sql_query = response.content.strip()
-        
-        # Clean up any markdown formatting or explanations
-        if "```sql" in sql_query:
-            sql_query = sql_query.split("```sql")[1].split("```")[0].strip()
-        elif "```" in sql_query:
-            sql_query = sql_query.split("```")[1].split("```")[0].strip()
-            
-        # Execute the query if it looks valid
-        if sql_query.lower().startswith(("select", "with")):
-            with st.spinner("Executing query..."):
-                result = st.session_state.sqlite_chatbot.execute_sql_query(sql_query)
-                
-            return {
-                "query": sql_query,
-                "result": result
-            }
-        
-        return {
-            "query": sql_query,
-            "result": None
-        }
-    except Exception as e:
-        import traceback
-        return {
-            "error": str(e),
-            "traceback": traceback.format_exc()
-        }
-
-def debug_sql_generation():
-    """Add a section for direct SQL generation debugging"""
-    st.subheader("Debug SQL Generation")
-    
-    st.write("This section lets you test SQL generation directly, bypassing the RAG system.")
-    
-    question = st.text_input("Enter a question for direct SQL generation")
-    
-    if st.button("Generate SQL Directly"):
-        result = direct_sql_generation(question)
-        
-        if isinstance(result, dict) and "query" in result:
-            st.write("### Generated SQL")
-            st.code(result["query"], language="sql")
-            
-            if "result" in result and isinstance(result["result"], pd.DataFrame):
-                st.write("### Query Result")
-                st.dataframe(result["result"])
-                
-                st.download_button(
-                    "Download Results as CSV",
-                    result["result"].to_csv(index=False).encode('utf-8'),
-                    "sql_results.csv",
-                    "text/csv",
-                    key="download-direct-sql"
-                )
-        elif isinstance(result, dict) and "error" in result:
-            st.error(f"Error: {result['error']}")
-            with st.expander("Traceback"):
-                st.code(result["traceback"])
-        else:
-            st.write(result)
 #------------------------------------------------------------------------
 # Main Application
 #------------------------------------------------------------------------
@@ -1247,11 +962,6 @@ def main():
     # Display SQL query interface
     display_direct_sql_interface()
     
-    # Add debug SQL generation section when in debug mode
-    if st.session_state.debug_mode:
-        debug_sql_generation()
-
-
     # Main chat interface
     st.subheader("Chat with your Database")
     

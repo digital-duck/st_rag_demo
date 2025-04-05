@@ -1,0 +1,33 @@
+{
+  "session_id": "sqlite_2fb4b541",
+  "rag_type": "sqlite",
+  "last_updated": "2025-04-04T22:19:10.758658",
+  "message_count": 2,
+  "messages": [
+    {
+      "role": "user",
+      "content": "find top 5 customers by orders",
+      "timestamp": "2025-04-04T22:19:10.756083"
+    },
+    {
+      "role": "assistant",
+      "content": "Please upload and process a SQLite database file first.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-04T22:19:10.758449",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": [
+      "chinook.sqlite3"
+    ]
+  }
+}
