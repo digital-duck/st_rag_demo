@@ -1,7 +1,3 @@
-"""
-find top 5 customers by sales
-"""
-
 import os
 import sys
 import streamlit as st
@@ -537,6 +533,7 @@ def handle_action_buttons():
         st.session_state.sqlite_messages = []
         st.success("All data cleared! Your chat history has been saved and can be loaded again.")
 
+
 def display_example_questions():
     """Display example question buttons"""
     st.subheader("Example Questions")
@@ -681,562 +678,34 @@ def process_direct_sql_query(sql_query, viz_type="table"):
         except Exception as e:
             st.error(f"Error executing query: {str(e)}")
 
-
-def add_assistant_response_with_context(response):
-    """Add an assistant response with full context to chat history"""
-    # Check if response was a dict with query information
-    if isinstance(response, dict):
-        assistant_message = {
-            "role": "assistant", 
-            "content": response.get("answer", str(response)),
-            "model": st.session_state.get("model_name", "gpt-3.5-turbo"),
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        # Add query information if available
-        if "query" in response:
-            assistant_message["query"] = response["query"]
-        
-        # Add data flag if available
-        if "data" in response and isinstance(response["data"], pd.DataFrame):
-            assistant_message["has_data"] = True
-            
-            # Use the serializable version of the data if available
-            if "data_dict" in response:
-                assistant_message["data_dict"] = response["data_dict"]
-            else:
-                # Create a serializable version of the DataFrame
-                assistant_message["data_dict"] = {
-                    'columns': response["data"].columns.tolist(),
-                    'data': response["data"].values.tolist(),
-                    'index': response["data"].index.tolist()
-                }
-            
-            # Store this in the chatbot for later visualization (don't store in chat history)
-            st.session_state.sqlite_chatbot.last_query_results = response["data"]
-        
-        # Add RAG parameters
-        assistant_message["rag_params"] = {
-            "k_value": st.session_state.k_value,
-            "chunk_size": st.session_state.chunk_size,
-            "chunk_overlap": st.session_state.chunk_overlap
-        }
-        
-        # Add debug info if available
-        if "debug_info" in response:
-            assistant_message["debug_info"] = response["debug_info"]
-    else:
-        # Regular message
-        assistant_message = {
-            "role": "assistant", 
-            "content": str(response),
-            "model": st.session_state.get("model_name", "gpt-3.5-turbo"),
-            "timestamp": datetime.now().isoformat(),
-            "rag_params": {
-                "k_value": st.session_state.k_value,
-                "chunk_size": st.session_state.chunk_size,
-                "chunk_overlap": st.session_state.chunk_overlap
-            }
-        }
-    
-    st.session_state.sqlite_messages.append(assistant_message)
-    save_current_chat_history()
-
-
-def generate_visualization_code(df, chart_type):
-    """
-    Generate Python code that would create the visualization
-    
-    Args:
-        df: pandas DataFrame with the data
-        chart_type: Type of chart to generate (bar, line, scatter, pie)
-        
-    Returns:
-        str: Python code snippet
-    """
-    # Get column information
-    columns = df.columns.tolist()
-    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
-    categorical_cols = df.select_dtypes(exclude=['number']).columns.tolist()
-    
-    # Create sample code snippet
-    code = """import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-"""
-    
-    # Add pandas DataFrame creation code with sample data
-    code += "\n# Create DataFrame with your data\ndf = pd.DataFrame({\n"
-    for col in columns:
-        sample_values = str(df[col].head(3).tolist()).replace('[', '').replace(']', '')
-        if pd.api.types.is_numeric_dtype(df[col]):
-            code += f"    '{col}': [{sample_values}, ...],\n"
-        else:
-            code += f"    '{col}': ['{sample_values}', ...],\n"
-    code += "})\n\n"
-    
-    # Add visualization code based on chart type
-    if chart_type == "bar" and len(categorical_cols) > 0 and len(numeric_cols) > 0:
-        x_col = categorical_cols[0]
-        y_col = numeric_cols[0]
-        
-        code += f"""# Create bar chart
-plt.figure(figsize=(10, 6))
-sns.barplot(x='{x_col}', y='{y_col}', data=df)
-plt.title('{y_col} by {x_col}')
-plt.xticks(rotation=45)
-plt.tight_layout()
-plt.show()"""
-
-    elif chart_type == "line" and len(numeric_cols) > 0:
-        y_col = numeric_cols[0]
-        x_col = columns[0] if columns[0] != y_col else columns[1] if len(columns) > 1 else "index"
-        
-        if x_col == "index":
-            code += f"""# Create line chart
-plt.figure(figsize=(10, 6))
-plt.plot(df['{y_col}'])
-plt.title('{y_col} over Index')
-plt.ylabel('{y_col}')
-plt.xlabel('Index')
-plt.grid(True)
-plt.tight_layout()
-plt.show()"""
-        else:
-            code += f"""# Create line chart
-plt.figure(figsize=(10, 6))
-plt.plot(df['{x_col}'], df['{y_col}'])
-plt.title('{y_col} vs {x_col}')
-plt.ylabel('{y_col}')
-plt.xlabel('{x_col}')
-plt.grid(True)
-plt.tight_layout()
-plt.show()"""
-
-    elif chart_type == "scatter" and len(numeric_cols) >= 2:
-        x_col = numeric_cols[0]
-        y_col = numeric_cols[1]
-        
-        code += f"""# Create scatter plot
-plt.figure(figsize=(10, 6))
-sns.scatterplot(x='{x_col}', y='{y_col}', data=df)
-plt.title('{y_col} vs {x_col}')
-plt.tight_layout()
-plt.show()"""
-
-    elif chart_type == "pie" and len(categorical_cols) > 0 and len(numeric_cols) > 0:
-        cat_col = categorical_cols[0]
-        value_col = numeric_cols[0]
-        
-        code += f"""# Create pie chart
-plt.figure(figsize=(10, 6))
-df_grouped = df.groupby('{cat_col}')['{value_col}'].sum()
-plt.pie(df_grouped, labels=df_grouped.index, autopct='%1.1f%%')
-plt.title('{value_col} Distribution by {cat_col}')
-plt.axis('equal')
-plt.tight_layout()
-plt.show()"""
-        
-    else:
-        # Default to a generic histogram of the first numeric column
-        if numeric_cols:
-            col = numeric_cols[0]
-            code += f"""# Create histogram
-plt.figure(figsize=(10, 6))
-sns.histplot(df['{col}'], kde=True)
-plt.title('Distribution of {col}')
-plt.tight_layout()
-plt.show()"""
-        else:
-            # Fallback if no numeric columns
-            code += """# No numeric columns found for visualization
-# Display the data instead
-print(df)"""
-    
-    return code
-
-
-def process_chat_message(prompt):
-    """Process a chat message and generate a response"""
-    with st.chat_message("assistant"):
-        # Initialize debug info dictionary
-        debug_info = {
-            "prompt": prompt,
-            "stage": "starting",
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        with st.spinner("Thinking..."):
-            try:
-                # Check if database is connected
-                if not hasattr(st.session_state.sqlite_chatbot, 'db_path') or not st.session_state.sqlite_chatbot.db_path:
-                    answer_text = "Please upload and process a SQLite database file first."
-                    st.warning(answer_text)
-                    add_assistant_message(answer_text)
-                    return
-                
-                # Get current model information
-                current_model = st.session_state.get("model_name", "gpt-3.5-turbo")
-                debug_info["model"] = current_model
-                
-                # Detect if this is a potential SQL or visualization request
-                sql_keywords = ["sql", "query", "table", "database", "select", "count", "find", "show me", "list"]
-                viz_keywords = ["chart", "plot", "graph", "visualize", "visualization", "show", "display"]
-                
-                is_sql_query = any(keyword in prompt.lower() for keyword in sql_keywords)
-                is_viz_query = any(keyword in prompt.lower() for keyword in viz_keywords)
-                
-                debug_info["is_sql_query"] = is_sql_query
-                debug_info["is_viz_query"] = is_viz_query
-                
-                # First approach: Always try SQL generation for database-related questions
-                if is_sql_query or is_viz_query or "how many" in prompt.lower():
-                    debug_info["stage"] = "attempting_sql_generation"
-                    
-                    try:
-                        # Generate SQL
-                        generated_query = st.session_state.sqlite_chatbot.generate_sql_query(prompt)
-                        debug_info["generated_query"] = generated_query
-                        
-                        # Check if generation succeeded
-                        if not generated_query.startswith("Error"):
-                            debug_info["stage"] = "sql_generation_succeeded"
-                            
-                            # Execute the query
-                            query_result = st.session_state.sqlite_chatbot.execute_sql_query(generated_query)
-                            debug_info["query_result_type"] = str(type(query_result))
-                            
-                            if isinstance(query_result, pd.DataFrame):
-                                debug_info["stage"] = "query_returned_dataframe"
-                                debug_info["row_count"] = len(query_result)
-                                debug_info["column_count"] = len(query_result.columns)
-                                
-                                # Format the answer WITHOUT including the table in the text
-                                num_rows = len(query_result)
-                                answer = f"I've executed the following SQL query based on your question:\n\n```sql\n{generated_query}\n```\n\nThe query returned {num_rows} rows."
-                                
-                                # Display the answer
-                                st.markdown(answer)
-                                
-                                # ONLY display the dataframe here - not in the text
-                                st.write("Here's the result:")
-                                st.dataframe(query_result)
-                                
-                                # Create visualization for data if requested or data looks suitable for visualization
-                                # Check if data is suitable for visualization (has numeric columns)
-                                has_numeric_cols = any(pd.api.types.is_numeric_dtype(query_result[col]) for col in query_result.columns)
-                                
-                                # Always offer visualization if requested or if data is suitable
-                                if is_viz_query or has_numeric_cols:
-                                    # Create visualization section with tabs
-                                    st.subheader("Visualization")
-                                    
-                                    # Create tabs for visualization and code
-                                    viz_tab, code_tab = st.tabs(["Visualization", "Python Code"])
-                                    
-                                    # Get the selected visualization type
-                                    viz_type = st.session_state.viz_type if hasattr(st.session_state, 'viz_type') else 'auto'
-                                    
-                                    # Create a unique ID for this visualization
-                                    viz_id = f"viz_{datetime.now().timestamp()}"
-                                    
-                                    # Show visualization in the viz tab
-                                    with viz_tab:
-                                        fig = generate_visualization(query_result, chart_type=viz_type)
-                                        if isinstance(fig, go.Figure):
-                                            st.plotly_chart(fig, use_container_width=True)
-                                            
-                                            # Generate and store Python code
-                                            python_code = generate_visualization_code(query_result, viz_type)
-                                            st.session_state[f"code_{viz_id}"] = python_code
-                                        else:
-                                            st.warning(f"Couldn't generate visualization: {fig}")
-                                    
-                                    # Show code in the code tab
-                                    with code_tab:
-                                        if f"code_{viz_id}" in st.session_state:
-                                            st.code(st.session_state[f"code_{viz_id}"], language="python")
-                                        else:
-                                            st.info("Select the Visualization tab to see the visualization first.")
-                                
-                                # Add download button
-                                csv = query_result.to_csv(index=False)
-                                st.download_button(
-                                    label="Download Results as CSV",
-                                    data=csv,
-                                    file_name="query_results.csv",
-                                    mime="text/csv"
-                                )
-                                
-                                # Create serializable version of the DataFrame for storage
-                                data_dict = {
-                                    'columns': query_result.columns.tolist(),
-                                    'data': query_result.values.tolist(),
-                                    'index': query_result.index.tolist()
-                                }
-                                
-                                # Add the assistant response to chat history
-                                response_with_data = {
-                                    "answer": answer,
-                                    "query": generated_query,
-                                    "data": query_result,
-                                    "data_dict": data_dict,
-                                    "query_type": "visualization" if is_viz_query else "sql_execution",
-                                    "debug_info": debug_info
-                                }
-                                add_assistant_response_with_context(response_with_data)
-                                return
-                            else:
-                                debug_info["stage"] = "query_returned_non_dataframe"
-                                debug_info["result"] = str(query_result)
-                                
-                                # Non-SELECT query result
-                                answer = f"I've executed the following SQL query based on your question:\n\n```sql\n{generated_query}\n```\n\nResult: {query_result}"
-                                st.markdown(answer)
-                                
-                                # Add the assistant response to chat history
-                                response_without_data = {
-                                    "answer": answer,
-                                    "query": generated_query,
-                                    "query_type": "sql_execution",
-                                    "debug_info": debug_info
-                                }
-                                add_assistant_response_with_context(response_without_data)
-                                return
-                        else:
-                            # SQL generation had an error, log and continue to RAG
-                            debug_info["stage"] = "sql_generation_failed"
-                            debug_info["sql_error"] = generated_query
-                            
-                            # Only show warning in debug mode
-                            if st.session_state.debug_mode:
-                                st.warning(f"SQL generation failed, falling back to RAG: {generated_query}")
-                    
-                    except Exception as sql_error:
-                        import traceback
-                        error_traceback = traceback.format_exc()
-                        
-                        # Log the error but continue to RAG as fallback
-                        debug_info["stage"] = "sql_execution_error"
-                        debug_info["sql_error"] = str(sql_error)
-                        debug_info["traceback"] = error_traceback
-                        
-                        # Only show error in debug mode
-                        if st.session_state.debug_mode:
-                            st.error(f"SQL execution error, falling back to RAG: {str(sql_error)}")
-                            st.code(error_traceback)  # Avoid nesting in expander
-                
-                # If we get here, we're handling a general question with RAG
-                debug_info["stage"] = "processing_with_rag"
-                
-                # Get response with RAG
-                response = st.session_state.sqlite_chatbot.ask(prompt, return_context=True)
-                debug_info["rag_response_received"] = True
-                
-                # Handle the response display
-                if isinstance(response, dict) and "answer" in response:
-                    st.markdown(response["answer"])
-                    
-                    # If there's query data, show it
-                    if "data" in response and isinstance(response["data"], pd.DataFrame):
-                        # Display the dataframe separately
-                        st.write("Here's the result:")
-                        st.dataframe(response["data"])
-                        
-                        # Check if data is suitable for visualization (has numeric columns)
-                        has_numeric_cols = any(pd.api.types.is_numeric_dtype(response["data"][col]) for col in response["data"].columns)
-                        
-                        # Add visualization if requested or data is suitable
-                        if is_viz_query or has_numeric_cols or ("query_type" in response and response["query_type"] == "visualization"):
-                            # Create visualization section
-                            st.subheader("Visualization")
-                            
-                            # Create tabs for visualization and code
-                            viz_tab, code_tab = st.tabs(["Visualization", "Python Code"])
-                            
-                            # Get visualization type
-                            viz_type = st.session_state.viz_type if hasattr(st.session_state, 'viz_type') else 'auto'
-                            
-                            # Create a unique ID for this visualization
-                            viz_id = f"viz_{datetime.now().timestamp()}"
-                            
-                            # Show visualization in the viz tab
-                            with viz_tab:
-                                fig = generate_visualization(response["data"], chart_type=viz_type)
-                                if isinstance(fig, go.Figure):
-                                    st.plotly_chart(fig, use_container_width=True)
-                                    
-                                    # Generate and store Python code
-                                    python_code = generate_visualization_code(response["data"], viz_type)
-                                    st.session_state[f"code_{viz_id}"] = python_code
-                                else:
-                                    st.warning(f"Couldn't generate visualization: {fig}")
-                            
-                            # Show code in the code tab
-                            with code_tab:
-                                if f"code_{viz_id}" in st.session_state:
-                                    st.code(st.session_state[f"code_{viz_id}"], language="python")
-                                else:
-                                    st.info("Select the Visualization tab to see the visualization first.")
-                            
-                            # Add download button
-                            csv = response["data"].to_csv(index=False)
-                            st.download_button(
-                                label="Download Results as CSV",
-                                data=csv,
-                                file_name="query_results.csv",
-                                mime="text/csv"
-                            )
-                    
-                    # Add response to chat history with debug info
-                    response["debug_info"] = debug_info
-                    add_assistant_response_with_context(response)
-                else:
-                    st.markdown(str(response))
-                    
-                    # Add to chat history
-                    add_assistant_message(str(response))
-                
-            except Exception as e:
-                # Capture the full error for debugging
-                import traceback
-                error_traceback = traceback.format_exc()
-                error_msg = f"An error occurred: {str(e)}"
-                
-                st.error(error_msg)
-                
-                # Show detailed error in debug mode without nesting expanders
-                if st.session_state.debug_mode:
-                    st.subheader("Error Details")
-                    st.code(error_traceback)
-                
-                # Add error to chat history
-                add_assistant_message(f"{error_msg}\n\nPlease try again with a different question.")
-
 def display_chat_messages():
-    """Display the chat message history with improved data handling"""
+    """Display the chat message history"""
     for message in st.session_state.sqlite_messages:
         with st.chat_message(message["role"]):
-            # Display the message content
             st.markdown(message["content"])
             
             # Check if this message has query data to visualize
-            if message["role"] == "assistant" and "query" in message:
-                # If we have data directly in the message
-                if "data_dict" in message:
-                    # Convert the serialized data back to a DataFrame
-                    try:
-                        data_dict = message["data_dict"]
-                        df = pd.DataFrame(data=data_dict['data'], columns=data_dict['columns'])
+            if message["role"] == "assistant" and "query" in message and message.get("has_data", False):
+                # Add option to visualize this query result again
+                with st.expander("Query Results", expanded=False):
+                    if hasattr(st.session_state.sqlite_chatbot, 'last_query_results') and st.session_state.sqlite_chatbot.last_query_results is not None:
+                        st.dataframe(st.session_state.sqlite_chatbot.last_query_results)
                         
-                        # Display the DataFrame
-                        st.write("Here's the result:")
-                        st.dataframe(df)
+                        # Select visualization type
+                        viz_options = ["table", "bar", "line", "scatter", "pie"]
+                        selected_viz = st.selectbox(f"Visualization Type for {message.get('query', 'query')[:20]}...", 
+                                                   viz_options, key=f"viz_{hash(message.get('timestamp', ''))}")
                         
-                        # Check if data is suitable for visualization (has numeric columns)
-                        has_numeric_cols = any(pd.api.types.is_numeric_dtype(df[col]) for col in df.columns)
-                        
-                        # Create visualization section if suitable
-                        if has_numeric_cols:
-                            # Create a unique ID for this message
-                            msg_key = str(hash(message.get('timestamp', '')))
-                            
-                            # Create tabs for visualization and code
-                            viz_tab, code_tab = st.tabs(["Visualization", "Python Code"])
-                            
-                            with viz_tab:
-                                # Select visualization type
-                                viz_options = ["bar", "line", "scatter", "pie", "table"]
-                                selected_viz = st.selectbox(
-                                    f"Visualization Type", 
-                                    viz_options, 
-                                    key=f"viz_type_{msg_key}"
-                                )
-                                
-                                # Generate Visualization button
-                                if st.button("Generate Visualization", key=f"gen_viz_{msg_key}"):
-                                    fig = generate_visualization(df, chart_type=selected_viz)
-                                    if isinstance(fig, go.Figure):
-                                        st.plotly_chart(fig, use_container_width=True)
-                                        
-                                        # Generate and store Python code
-                                        python_code = generate_visualization_code(df, selected_viz)
-                                        st.session_state[f"code_{msg_key}"] = python_code
-                                    else:
-                                        st.warning(f"Couldn't generate visualization: {fig}")
-                            
-                            # Show code in the code tab
-                            with code_tab:
-                                if f"code_{msg_key}" in st.session_state:
-                                    st.code(st.session_state[f"code_{msg_key}"], language="python")
-                                else:
-                                    st.info("Generate a visualization first to see the corresponding Python code.")
-                                    
-                        # Add download option
-                        csv = df.to_csv(index=False)
-                        st.download_button(
-                            label="Download Results as CSV",
-                            data=csv,
-                            file_name="query_results.csv",
-                            mime="text/csv",
-                            key=f"download_{hash(message.get('timestamp', ''))}"
-                        )
-                    except Exception as e:
-                        st.error(f"Error displaying data: {str(e)}")
-                
-                # If no data_dict, check for last_query_results
-                elif hasattr(st.session_state.sqlite_chatbot, 'last_query_results') and \
-                     st.session_state.sqlite_chatbot.last_query_results is not None and \
-                     message.get("has_data", False):
-                    
-                    df = st.session_state.sqlite_chatbot.last_query_results
-                    
-                    # Display the results
-                    st.write("Query Results:")
-                    st.dataframe(df)
-                    
-                    # Check if data is suitable for visualization (has numeric columns)
-                    has_numeric_cols = any(pd.api.types.is_numeric_dtype(df[col]) for col in df.columns)
-                    
-                    # Create visualization section if suitable
-                    if has_numeric_cols:
-                        # Create a unique ID for this message
-                        msg_key = str(hash(message.get('timestamp', '')))
-                        
-                        # Create tabs for visualization and code
-                        viz_tab, code_tab = st.tabs(["Visualization", "Python Code"])
-                        
-                        with viz_tab:
-                            # Select visualization type
-                            viz_options = ["bar", "line", "scatter", "pie", "table"]
-                            selected_viz = st.selectbox(
-                                f"Visualization Type", 
-                                viz_options, 
-                                key=f"viz_type_{msg_key}"
-                            )
-                            
-                            # Generate Visualization button
-                            if st.button("Generate Visualization", key=f"gen_viz_{msg_key}"):
-                                fig = generate_visualization(df, chart_type=selected_viz)
-                                if isinstance(fig, go.Figure):
-                                    st.plotly_chart(fig, use_container_width=True)
-                                    
-                                    # Generate and store Python code
-                                    python_code = generate_visualization_code(df, selected_viz)
-                                    st.session_state[f"code_{msg_key}"] = python_code
-                                else:
-                                    st.warning(f"Couldn't generate visualization: {fig}")
-                        
-                        # Show code in the code tab
-                        with code_tab:
-                            if f"code_{msg_key}" in st.session_state:
-                                st.code(st.session_state[f"code_{msg_key}"], language="python")
+                        if selected_viz != "table" and st.button("Generate Visualization", key=f"genviz_{hash(message.get('timestamp', ''))}"):
+                            fig = generate_visualization(st.session_state.sqlite_chatbot.last_query_results, chart_type=selected_viz)
+                            if isinstance(fig, go.Figure):
+                                st.plotly_chart(fig, use_container_width=True)
                             else:
-                                st.info("Generate a visualization first to see the corresponding Python code.")
+                                st.warning(fig)  # Show error message
             
             # Display metadata for assistant messages
             if message["role"] == "assistant" and "model" in message:
-                with st.expander("Message Details", expanded=False):
+                with st.expander("Message Details"):
                     # Show model used
                     st.caption(f"**Model**: {message.get('model', 'Unknown')}")
                     
@@ -1255,7 +724,7 @@ def display_chat_messages():
                         params = message["rag_params"]
                         st.caption(f"- k_value: {params.get('k_value', 'N/A')}")
                         st.caption(f"- chunk_size: {params.get('chunk_size', 'N/A')}")
-                        st.caption(f"- chunk_overlap: {params.get('chunk_overlap', 'N/A')}")                        
+                        st.caption(f"- chunk_overlap: {params.get('chunk_overlap', 'N/A')}")
 
 def handle_chat_input():
     """Handle the chat input and generate responses"""
@@ -1278,8 +747,180 @@ def handle_chat_input():
         # No rerun here as it can interrupt the processing
         # The save_current_chat_history function will be called by add_assistant_message
 
+def process_chat_message(prompt):
+    """Process a chat message and generate a response"""
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                # Check if database is connected - use db_path instead of db_connection
+                if not hasattr(st.session_state.sqlite_chatbot, 'db_path') or not st.session_state.sqlite_chatbot.db_path:
+                    answer_text = "Please upload and process a SQLite database file first."
+                    st.warning(answer_text)
+                    add_assistant_message(answer_text)
+                    return
+                
+                # Get current model information
+                current_model = st.session_state.get("model_name", "gpt-3.5-turbo")
+                
+                # Detect if this is a potential visualization request
+                viz_keywords = ["chart", "plot", "graph", "visualize", "visualization", "show", "display"]
+                is_viz_query = any(keyword in prompt.lower() for keyword in viz_keywords)
+                
+                # Add debug prints to troubleshoot
+                st.session_state.debug_info = {
+                    "prompt": prompt,
+                    "stage": "starting_processing",
+                    "db_path": st.session_state.sqlite_chatbot.db_path
+                }
+                
+                # Always try to generate SQL first for database questions
+                try:
+                    st.session_state.debug_info["stage"] = "generating_sql"
+                    # Generate SQL directly rather than using the ask method first
+                    generated_query = st.session_state.sqlite_chatbot.generate_sql_query(prompt)
+                    st.session_state.debug_info["generated_query"] = generated_query
+                    
+                    if not generated_query.startswith("Error"):
+                        st.session_state.debug_info["stage"] = "executing_query"
+                        # Execute the query
+                        query_result = st.session_state.sqlite_chatbot.execute_sql_query(generated_query)
+                        st.session_state.debug_info["query_result_type"] = str(type(query_result))
+                        
+                        if isinstance(query_result, pd.DataFrame):
+                            # Format the answer
+                            num_rows = len(query_result)
+                            answer = f"I've executed the following SQL query based on your question:\n\n```sql\n{generated_query}\n```\n\nThe query returned {num_rows} rows."
+                            
+                            if num_rows > 0 and num_rows <= 10:
+                                # Show the full result for small datasets
+                                answer += f"\n\nHere's the result:\n\n{query_result.to_markdown()}"
+                            elif num_rows > 10:
+                                # Show just a sample for larger datasets
+                                answer += f"\n\nHere's a sample of the results (first 5 rows):\n\n{query_result.head(5).to_markdown()}"
+                            
+                            # Display the answer
+                            st.markdown(answer)
+                            
+                            # Show the data in a well-formatted way
+                            st.dataframe(query_result)
+                            
+                            # If this is a viz query, create visualization
+                            if is_viz_query:
+                                viz_type = st.session_state.viz_type
+                                st.subheader("Visualization")
+                                fig = generate_visualization(query_result, chart_type=viz_type)
+                                if isinstance(fig, go.Figure):
+                                    st.plotly_chart(fig, use_container_width=True)
+                            
+                            # Add the assistant response to chat history
+                            response_with_data = {
+                                "answer": answer,
+                                "query": generated_query,
+                                "data": query_result,
+                                "query_type": "sql_execution"
+                            }
+                            add_assistant_response_with_context(response_with_data)
+                            return
+                        else:
+                            # Non-SELECT query result
+                            answer = f"I've executed the following SQL query based on your question:\n\n```sql\n{generated_query}\n```\n\nResult: {query_result}"
+                            st.markdown(answer)
+                            
+                            # Add the assistant response to chat history
+                            response_without_data = {
+                                "answer": answer,
+                                "query": generated_query,
+                                "query_type": "sql_execution"
+                            }
+                            add_assistant_response_with_context(response_without_data)
+                            return
+                    else:
+                        # SQL generation had an error, fall back to RAG
+                        st.session_state.debug_info["sql_error"] = generated_query
+                        st.session_state.debug_info["stage"] = "falling_back_to_rag"
+                
+                except Exception as sql_error:
+                    # Log the error but continue to RAG as fallback
+                    st.session_state.debug_info["sql_error"] = str(sql_error)
+                    st.session_state.debug_info["stage"] = "sql_error_falling_back_to_rag"
+                
+                # If we get here, either SQL generation failed or we're handling a general question
+                st.session_state.debug_info["stage"] = "processing_with_rag"
+                
+                # Debug mode has different display
+                if st.session_state.debug_mode:
+                    st.session_state.debug_info["stage"] = "debug_mode_processing"
+                    response = st.session_state.sqlite_chatbot.ask(prompt, return_context=True)
+                    
+                    # Create tabs for answer and debugging info
+                    answer_tab, context_tab, metrics_tab, sql_tab = st.tabs([
+                        "Answer", "Retrieved Context", "RAG Metrics", "SQL Debug"
+                    ])
+                    
+                    with answer_tab:
+                        if isinstance(response, dict) and "answer" in response:
+                            st.markdown(response["answer"])
+                            answer_text = response["answer"]
+                        else:
+                            st.markdown(str(response))
+                            answer_text = str(response)
+                    
+                    with context_tab:
+                        if isinstance(response, dict) and "retrieved_context" in response:
+                            st.text_area("Retrieved Documents", 
+                                        response["retrieved_context"], 
+                                        height=400)
+                        else:
+                            st.text("No context retrieved for this query.")
+                    
+                    with metrics_tab:
+                        # Show RAG metrics and stats
+                        st.subheader("RAG Retrieval Metrics")
+                        st.json(st.session_state.debug_info)
+                    
+                    with sql_tab:
+                        st.subheader("SQL Debug Information")
+                        st.write("### Debug Info")
+                        st.json(st.session_state.debug_info)
+                        
+                        if "generated_query" in st.session_state.debug_info:
+                            st.write("### Generated SQL Query")
+                            st.code(st.session_state.debug_info["generated_query"], language="sql")
+                else:
+                    # Regular mode - get response with RAG
+                    response = st.session_state.sqlite_chatbot.ask(prompt, return_context=True)
+                    
+                    if isinstance(response, dict) and "answer" in response:
+                        st.markdown(response["answer"])
+                        
+                        # If there's query data, show it
+                        if "data" in response and isinstance(response["data"], pd.DataFrame):
+                            st.dataframe(response["data"])
+                            
+                            # Add visualization if requested
+                            if is_viz_query or ("query_type" in response and response["query_type"] == "visualization"):
+                                viz_type = st.session_state.viz_type
+                                st.subheader("Visualization")
+                                fig = generate_visualization(response["data"], chart_type=viz_type)
+                                if isinstance(fig, go.Figure):
+                                    st.plotly_chart(fig, use_container_width=True)
+                        
+                        answer_text = response["answer"]
+                    else:
+                        st.markdown(str(response))
+                        answer_text = str(response)
+                
+                # Add response to chat history
+                add_assistant_response_with_context(response)
+                
+            except Exception as e:
+                # Capture the full error for debugging
+                import traceback
+                error_msg = f"An error occurred: {str(e)}\n\n{traceback.format_exc()}"
+                st.error(error_msg)
+                add_assistant_message(error_msg)
 
-
+                
 def process_debug_mode_response(prompt, is_viz_query):
     """Process a response in debug mode with detailed information"""
     response = st.session_state.sqlite_chatbot.ask(prompt, return_context=True)
@@ -1431,7 +1072,49 @@ def add_assistant_message(answer_text):
     st.session_state.sqlite_messages.append(assistant_message)
     save_current_chat_history()
 
-
+def add_assistant_response_with_context(response):
+    """Add an assistant response with full context to chat history"""
+    # Check if response was a dict with query information
+    if isinstance(response, dict):
+        assistant_message = {
+            "role": "assistant", 
+            "content": response.get("answer", str(response)),
+            "model": st.session_state.get("model_name", "gpt-3.5-turbo"),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+        # Add query information if available
+        if "query" in response:
+            assistant_message["query"] = response["query"]
+        
+        # Add data flag if available
+        if "data" in response and isinstance(response["data"], pd.DataFrame):
+            assistant_message["has_data"] = True
+            # Store this in the chatbot for later visualization
+            st.session_state.sqlite_chatbot.last_query_results = response["data"]
+        
+        # Add RAG parameters
+        assistant_message["rag_params"] = {
+            "k_value": st.session_state.k_value,
+            "chunk_size": st.session_state.chunk_size,
+            "chunk_overlap": st.session_state.chunk_overlap
+        }
+    else:
+        # Regular message
+        assistant_message = {
+            "role": "assistant", 
+            "content": str(response),
+            "model": st.session_state.get("model_name", "gpt-3.5-turbo"),
+            "timestamp": datetime.now().isoformat(),
+            "rag_params": {
+                "k_value": st.session_state.k_value,
+                "chunk_size": st.session_state.chunk_size,
+                "chunk_overlap": st.session_state.chunk_overlap
+            }
+        }
+    
+    st.session_state.sqlite_messages.append(assistant_message)
+    save_current_chat_history()
 
 def direct_sql_generation(question):
     """Generate SQL directly using the LLM without going through complex chains"""

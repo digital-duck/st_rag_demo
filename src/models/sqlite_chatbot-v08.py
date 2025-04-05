@@ -10,52 +10,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
 from .document_chatbot import DocumentChatbot
 
-def format_query_response(query, query_result, include_table=False):
-    """
-    Format a SQL query response with optional table inclusion
-    
-    Args:
-        query: The SQL query that was executed
-        query_result: The results DataFrame
-        include_table: Whether to include table markdown in the response
-        
-    Returns:
-        str: Formatted response text
-    """
-    if isinstance(query_result, pd.DataFrame):
-        num_rows = len(query_result)
-        answer = f"I've executed the following SQL query based on your question:\n\n```sql\n{query}\n```\n\nThe query returned {num_rows} rows."
-        
-        # Only include the table in the text if explicitly requested
-        if include_table:
-            if num_rows > 0 and num_rows <= 10:
-                # Show the full result for small datasets
-                try:
-                    # Try to use to_markdown if available
-                    table_text = query_result.to_markdown()
-                except:
-                    # Fall back to string representation
-                    table_text = query_result.to_string(index=False)
-                    
-                answer += f"\n\nHere's the result:\n\n```\n{table_text}\n```"
-            elif num_rows > 10:
-                # Show just a sample for larger datasets
-                try:
-                    # Try to use to_markdown if available
-                    table_text = query_result.head(5).to_markdown()
-                except:
-                    # Fall back to string representation
-                    table_text = query_result.head(5).to_string(index=False)
-                    
-                answer += f"\n\nHere's a sample of the results (first 5 rows):\n\n```\n{table_text}\n```"
-        
-        return answer
-    else:
-        # Non-DataFrame result
-        return f"I've executed the following SQL query based on your question:\n\n```sql\n{query}\n```\n\nResult: {query_result}"
-
-
-
 class SQLiteChatbot(DocumentChatbot):
     """Chatbot specialized for SQLite database processing and Q&A"""
 
@@ -546,7 +500,7 @@ class SQLiteChatbot(DocumentChatbot):
         
     def ask(self, question, return_context=False):
         """
-        Ask a question about the database with improved SQL generation
+        Ask a question about the database
         
         Args:
             question (str): The question to ask
@@ -556,7 +510,7 @@ class SQLiteChatbot(DocumentChatbot):
             str or dict: Response or dict with additional info
         """
         try:
-            # Check if database is connected using db_path
+            # Check if database is connected using db_path instead of db_connection
             if not self.db_path or not self.sql_database:
                 error_msg = "Please upload and process a SQLite database file first."
                 if return_context:
@@ -568,62 +522,43 @@ class SQLiteChatbot(DocumentChatbot):
                     }
                 return error_msg
             
-            # Detect query type with improved keyword detection
-            sql_keywords = [
-                "sql", "query", "table", "count", "find", "show", "list", 
-                "top", "how many", "select", "insert", "update", "delete"
-            ]
+            # Check if this looks like a request for SQL generation or data visualization
+            sql_keywords = ["sql", "query", "table", "count", "find", "show", "list", "top", "customers", "orders", "sales"]
             viz_keywords = ["chart", "plot", "graph", "visualize", "visualization", "show", "display"]
             
-            # Check if this is likely a SQL query by checking for SQL keywords or query request patterns
-            is_sql_query = (
-                any(keyword in question.lower() for keyword in sql_keywords) or
-                "write a query" in question.lower() or 
-                "generate a query" in question.lower() or
-                question.lower().startswith("how many") or
-                "database" in question.lower() or
-                "rows" in question.lower()
-            )
-            
+            is_sql_query = any(keyword in question.lower() for keyword in sql_keywords)
             is_viz_query = any(keyword in question.lower() for keyword in viz_keywords)
             
-            # Enhanced SQL generation and execution logic
-            if is_sql_query or is_viz_query:
+            # SQL generation and execution logic
+            if is_sql_query or "write a query" in question.lower() or "generate a query" in question.lower():
                 try:
                     # Generate SQL query
                     generated_query = self.generate_sql_query(question)
                     
                     if generated_query.startswith("Error"):
-                        # If context is requested, include the error in the response
-                        if return_context:
-                            return {
-                                "answer": f"I couldn't generate a SQL query for your question. {generated_query}",
-                                "query_type": "error",
-                                "error": generated_query,
-                                "retrieved_context": "",
-                                "formatted_prompt": ""
-                            }
-                        # Otherwise just return the error
-                        return generated_query
+                        # Return the error
+                        return {
+                            "answer": generated_query,
+                            "query_type": "error",
+                            "retrieved_context": "",
+                            "formatted_prompt": ""
+                        }
                     
                     # Try to execute the query
                     try:
                         query_result = self.execute_sql_query(generated_query)
                         
                         if isinstance(query_result, pd.DataFrame):
-                            # Format a helpful answer that includes the query but NOT the table output
+                            # Format a helpful answer that includes the query and results
                             num_rows = len(query_result)
                             answer = f"I've executed the following SQL query based on your question:\n\n```sql\n{generated_query}\n```\n\nThe query returned {num_rows} rows."
                             
-                            # IMPORTANT: Don't include the table in the answer text
-                            # Instead, store the DataFrame data in a serializable format
-                            
-                            # Convert DataFrame to a serializable format (as a dictionary)
-                            df_dict = {
-                                'columns': query_result.columns.tolist(),
-                                'data': query_result.values.tolist(),
-                                'index': query_result.index.tolist()
-                            }
+                            if num_rows > 0 and num_rows <= 10:
+                                # Show the full result for small datasets
+                                answer += f"\n\nHere's the result:\n\n{query_result.to_markdown()}"
+                            elif num_rows > 10:
+                                # Show just a sample for larger datasets
+                                answer += f"\n\nHere's a sample of the results (first 5 rows):\n\n{query_result.head(5).to_markdown()}"
                             
                             # For visualization queries, add visualization recommendations
                             if is_viz_query:
@@ -645,8 +580,7 @@ class SQLiteChatbot(DocumentChatbot):
                                 "answer": answer,
                                 "query_type": "visualization" if is_viz_query else "sql_execution",
                                 "query": generated_query,
-                                "data": query_result,  # Keep the actual DataFrame for use in the app
-                                "data_dict": df_dict,  # Add serializable version for storage
+                                "data": query_result,
                                 "retrieved_context": "",
                                 "formatted_prompt": ""
                             }
@@ -664,24 +598,26 @@ class SQLiteChatbot(DocumentChatbot):
                             "answer": f"I generated the following SQL query:\n\n```sql\n{generated_query}\n```\n\nBut encountered an error when executing it: {str(execution_error)}",
                             "query_type": "error",
                             "query": generated_query,
-                            "error": str(execution_error),
                             "retrieved_context": "",
                             "formatted_prompt": ""
                         }
                 except Exception as sql_error:
-                    # If SQL generation fails, log the error and fall back to RAG
-                    print(f"SQL generation error: {str(sql_error)}")
-                    # Fall through to RAG approach below
-            
-            # Use the RAG approach for general database questions or if SQL generation failed
-            rag_response = super().ask(question, return_context=True)
-            
-            if return_context:
-                return rag_response
-            elif isinstance(rag_response, dict) and "answer" in rag_response:
-                return rag_response["answer"]
+                    # If SQL generation fails, fall back to RAG
+                    rag_response = super().ask(question, return_context=True)
+                    if return_context:
+                        return rag_response
+                    return rag_response.get("answer", str(rag_response))
+                    
             else:
-                return rag_response
+                # Use the RAG approach for general database questions
+                response = super().ask(question, return_context=True)
+                
+                if return_context:
+                    return response
+                elif isinstance(response, dict) and "answer" in response:
+                    return response["answer"]
+                else:
+                    return response
                     
         except Exception as e:
             error_msg = f"Error processing your question: {str(e)}"
@@ -693,3 +629,4 @@ class SQLiteChatbot(DocumentChatbot):
                     "formatted_prompt": ""
                 }
             return error_msg
+    
