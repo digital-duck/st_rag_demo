@@ -1,0 +1,300 @@
+{
+  "session_id": "sqlite_3d42447f",
+  "rag_type": "sqlite",
+  "last_updated": "2025-04-05T14:43:20.939614",
+  "message_count": 8,
+  "messages": [
+    {
+      "role": "user",
+      "content": "find top 5 customers by sales",
+      "timestamp": "2025-04-05T14:42:35.080660"
+    },
+    {
+      "role": "assistant",
+      "content": "I've executed the following SQL query based on your question:\n\n```sql\nSELECT c.CustomerId, c.FirstName, c.LastName, SUM(i.Total) AS TotalSales\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nGROUP BY c.CustomerId\nORDER BY TotalSales DESC\nLIMIT 5;\n```\n\nThe query returned 5 rows.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-05T14:42:36.334151",
+      "query": "SELECT c.CustomerId, c.FirstName, c.LastName, SUM(i.Total) AS TotalSales\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nGROUP BY c.CustomerId\nORDER BY TotalSales DESC\nLIMIT 5;",
+      "has_data": true,
+      "data_dict": {
+        "columns": [
+          "CustomerId",
+          "FirstName",
+          "LastName",
+          "TotalSales"
+        ],
+        "data": [
+          [
+            6,
+            "Helena",
+            "Holý",
+            49.62
+          ],
+          [
+            26,
+            "Richard",
+            "Cunningham",
+            47.62
+          ],
+          [
+            57,
+            "Luis",
+            "Rojas",
+            46.62
+          ],
+          [
+            45,
+            "Ladislav",
+            "Kovács",
+            45.62
+          ],
+          [
+            46,
+            "Hugh",
+            "O'Reilly",
+            45.62
+          ]
+        ],
+        "index": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      },
+      "debug_info": {
+        "prompt": "find top 5 customers by sales",
+        "stage": "query_returned_dataframe",
+        "timestamp": "2025-04-05T14:42:35.081502",
+        "model": "gpt-3.5-turbo",
+        "is_sql_query": true,
+        "is_viz_query": false,
+        "generated_query": "SELECT c.CustomerId, c.FirstName, c.LastName, SUM(i.Total) AS TotalSales\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nGROUP BY c.CustomerId\nORDER BY TotalSales DESC\nLIMIT 5;",
+        "query_result_type": "<class 'pandas.core.frame.DataFrame'>",
+        "row_count": 5,
+        "column_count": 4
+      }
+    },
+    {
+      "role": "user",
+      "content": "Write a query to list all tables and their row counts",
+      "timestamp": "2025-04-05T14:42:45.539231"
+    },
+    {
+      "role": "user",
+      "content": "Write a query to list all tables and their row counts",
+      "timestamp": "2025-04-05T14:42:57.322935"
+    },
+    {
+      "role": "assistant",
+      "content": "I've executed the following SQL query based on your question:\n\n```sql\nSELECT name AS \"Table Name\", (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = \"Table Name\") AS \"Row Count\"\nFROM sqlite_master\nWHERE type = 'table';\n```\n\nThe query returned 13 rows.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-05T14:42:58.381181",
+      "query": "SELECT name AS \"Table Name\", (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = \"Table Name\") AS \"Row Count\"\nFROM sqlite_master\nWHERE type = 'table';",
+      "has_data": true,
+      "data_dict": {
+        "columns": [
+          "Table Name",
+          "Row Count"
+        ],
+        "data": [
+          [
+            "albums",
+            0
+          ],
+          [
+            "sqlite_sequence",
+            0
+          ],
+          [
+            "artists",
+            0
+          ],
+          [
+            "customers",
+            0
+          ],
+          [
+            "employees",
+            0
+          ],
+          [
+            "genres",
+            0
+          ],
+          [
+            "invoices",
+            0
+          ],
+          [
+            "invoice_items",
+            0
+          ],
+          [
+            "media_types",
+            0
+          ],
+          [
+            "playlists",
+            0
+          ],
+          [
+            "playlist_track",
+            0
+          ],
+          [
+            "tracks",
+            0
+          ],
+          [
+            "sqlite_stat1",
+            0
+          ]
+        ],
+        "index": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      },
+      "debug_info": {
+        "prompt": "Write a query to list all tables and their row counts",
+        "stage": "query_returned_dataframe",
+        "timestamp": "2025-04-05T14:42:57.323597",
+        "model": "gpt-3.5-turbo",
+        "is_sql_query": true,
+        "is_viz_query": false,
+        "generated_query": "SELECT name AS \"Table Name\", (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = \"Table Name\") AS \"Row Count\"\nFROM sqlite_master\nWHERE type = 'table';",
+        "query_result_type": "<class 'pandas.core.frame.DataFrame'>",
+        "row_count": 13,
+        "column_count": 2
+      }
+    },
+    {
+      "role": "user",
+      "content": "Show me the schema for all tables",
+      "timestamp": "2025-04-05T14:43:11.811418"
+    },
+    {
+      "role": "user",
+      "content": "Show me the schema for all tables",
+      "timestamp": "2025-04-05T14:43:19.959387"
+    },
+    {
+      "role": "assistant",
+      "content": "I've executed the following SQL query based on your question:\n\n```sql\nSELECT sql FROM sqlite_master WHERE type='table';\n```\n\nThe query returned 13 rows.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-05T14:43:20.939328",
+      "query": "SELECT sql FROM sqlite_master WHERE type='table';",
+      "has_data": true,
+      "data_dict": {
+        "columns": [
+          "sql"
+        ],
+        "data": [
+          [
+            "CREATE TABLE \"albums\"\r\n(\r\n    [AlbumId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [Title] NVARCHAR(160)  NOT NULL,\r\n    [ArtistId] INTEGER  NOT NULL,\r\n    FOREIGN KEY ([ArtistId]) REFERENCES \"artists\" ([ArtistId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION\r\n)"
+          ],
+          [
+            "CREATE TABLE sqlite_sequence(name,seq)"
+          ],
+          [
+            "CREATE TABLE \"artists\"\r\n(\r\n    [ArtistId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [Name] NVARCHAR(120)\r\n)"
+          ],
+          [
+            "CREATE TABLE \"customers\"\r\n(\r\n    [CustomerId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [FirstName] NVARCHAR(40)  NOT NULL,\r\n    [LastName] NVARCHAR(20)  NOT NULL,\r\n    [Company] NVARCHAR(80),\r\n    [Address] NVARCHAR(70),\r\n    [City] NVARCHAR(40),\r\n    [State] NVARCHAR(40),\r\n    [Country] NVARCHAR(40),\r\n    [PostalCode] NVARCHAR(10),\r\n    [Phone] NVARCHAR(24),\r\n    [Fax] NVARCHAR(24),\r\n    [Email] NVARCHAR(60)  NOT NULL,\r\n    [SupportRepId] INTEGER,\r\n    FOREIGN KEY ([SupportRepId]) REFERENCES \"employees\" ([EmployeeId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION\r\n)"
+          ],
+          [
+            "CREATE TABLE \"employees\"\r\n(\r\n    [EmployeeId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [LastName] NVARCHAR(20)  NOT NULL,\r\n    [FirstName] NVARCHAR(20)  NOT NULL,\r\n    [Title] NVARCHAR(30),\r\n    [ReportsTo] INTEGER,\r\n    [BirthDate] DATETIME,\r\n    [HireDate] DATETIME,\r\n    [Address] NVARCHAR(70),\r\n    [City] NVARCHAR(40),\r\n    [State] NVARCHAR(40),\r\n    [Country] NVARCHAR(40),\r\n    [PostalCode] NVARCHAR(10),\r\n    [Phone] NVARCHAR(24),\r\n    [Fax] NVARCHAR(24),\r\n    [Email] NVARCHAR(60),\r\n    FOREIGN KEY ([ReportsTo]) REFERENCES \"employees\" ([EmployeeId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION\r\n)"
+          ],
+          [
+            "CREATE TABLE \"genres\"\r\n(\r\n    [GenreId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [Name] NVARCHAR(120)\r\n)"
+          ],
+          [
+            "CREATE TABLE \"invoices\"\r\n(\r\n    [InvoiceId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [CustomerId] INTEGER  NOT NULL,\r\n    [InvoiceDate] DATETIME  NOT NULL,\r\n    [BillingAddress] NVARCHAR(70),\r\n    [BillingCity] NVARCHAR(40),\r\n    [BillingState] NVARCHAR(40),\r\n    [BillingCountry] NVARCHAR(40),\r\n    [BillingPostalCode] NVARCHAR(10),\r\n    [Total] NUMERIC(10,2)  NOT NULL,\r\n    FOREIGN KEY ([CustomerId]) REFERENCES \"customers\" ([CustomerId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION\r\n)"
+          ],
+          [
+            "CREATE TABLE \"invoice_items\"\r\n(\r\n    [InvoiceLineId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [InvoiceId] INTEGER  NOT NULL,\r\n    [TrackId] INTEGER  NOT NULL,\r\n    [UnitPrice] NUMERIC(10,2)  NOT NULL,\r\n    [Quantity] INTEGER  NOT NULL,\r\n    FOREIGN KEY ([InvoiceId]) REFERENCES \"invoices\" ([InvoiceId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION,\r\n    FOREIGN KEY ([TrackId]) REFERENCES \"tracks\" ([TrackId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION\r\n)"
+          ],
+          [
+            "CREATE TABLE \"media_types\"\r\n(\r\n    [MediaTypeId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [Name] NVARCHAR(120)\r\n)"
+          ],
+          [
+            "CREATE TABLE \"playlists\"\r\n(\r\n    [PlaylistId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [Name] NVARCHAR(120)\r\n)"
+          ],
+          [
+            "CREATE TABLE \"playlist_track\"\r\n(\r\n    [PlaylistId] INTEGER  NOT NULL,\r\n    [TrackId] INTEGER  NOT NULL,\r\n    CONSTRAINT [PK_PlaylistTrack] PRIMARY KEY  ([PlaylistId], [TrackId]),\r\n    FOREIGN KEY ([PlaylistId]) REFERENCES \"playlists\" ([PlaylistId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION,\r\n    FOREIGN KEY ([TrackId]) REFERENCES \"tracks\" ([TrackId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION\r\n)"
+          ],
+          [
+            "CREATE TABLE \"tracks\"\r\n(\r\n    [TrackId] INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,\r\n    [Name] NVARCHAR(200)  NOT NULL,\r\n    [AlbumId] INTEGER,\r\n    [MediaTypeId] INTEGER  NOT NULL,\r\n    [GenreId] INTEGER,\r\n    [Composer] NVARCHAR(220),\r\n    [Milliseconds] INTEGER  NOT NULL,\r\n    [Bytes] INTEGER,\r\n    [UnitPrice] NUMERIC(10,2)  NOT NULL,\r\n    FOREIGN KEY ([AlbumId]) REFERENCES \"albums\" ([AlbumId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION,\r\n    FOREIGN KEY ([GenreId]) REFERENCES \"genres\" ([GenreId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION,\r\n    FOREIGN KEY ([MediaTypeId]) REFERENCES \"media_types\" ([MediaTypeId]) \r\n\t\tON DELETE NO ACTION ON UPDATE NO ACTION\r\n)"
+          ],
+          [
+            "CREATE TABLE sqlite_stat1(tbl,idx,stat)"
+          ]
+        ],
+        "index": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      },
+      "debug_info": {
+        "prompt": "Show me the schema for all tables",
+        "stage": "query_returned_dataframe",
+        "timestamp": "2025-04-05T14:43:19.959876",
+        "model": "gpt-3.5-turbo",
+        "is_sql_query": true,
+        "is_viz_query": true,
+        "generated_query": "SELECT sql FROM sqlite_master WHERE type='table';",
+        "query_result_type": "<class 'pandas.core.frame.DataFrame'>",
+        "row_count": 13,
+        "column_count": 1
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": [
+      "chinook.sqlite3"
+    ]
+  }
+}

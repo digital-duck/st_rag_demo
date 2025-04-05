@@ -1,8 +1,8 @@
 {
   "session_id": "csv_8f79b451",
   "rag_type": "csv",
-  "last_updated": "2025-04-04T03:23:07.668689",
-  "message_count": 8,
+  "last_updated": "2025-04-05T13:24:20.271339",
+  "message_count": 10,
   "messages": [
     {
       "role": "user",
@@ -67,6 +67,22 @@
         "chunk_size": 1000,
         "chunk_overlap": 100
       }
+    },
+    {
+      "role": "user",
+      "content": "What is Codebasics",
+      "timestamp": "2025-04-05T13:24:18.510037"
+    },
+    {
+      "role": "assistant",
+      "content": "Codebasics is an educational platform that offers courses, including a bootcamp, designed for beginners with no prior experience in the field of data analysis. The platform has benefited over 9000 learners, as mentioned in the provided context. Codebasics provides quality courses, and potential learners can check reviews and connect with past participants via LinkedIn to get direct feedback about the courses. The bootcamp offered by Codebasics requires a functional laptop with at least 4GB RAM, an internet connection, and a willingness to learn data analysis.",
+      "timestamp": "2025-04-05T13:24:20.271087",
+      "model": "gpt-3.5-turbo",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
     }
   ],
   "metadata": {
@@ -74,8 +90,6 @@
     "k_value": 5,
     "chunk_size": 1000,
     "chunk_overlap": 100,
-    "files_processed": [
-      "Code_Basics_FAQ.csv"
-    ]
+    "files_processed": []
   }
 }

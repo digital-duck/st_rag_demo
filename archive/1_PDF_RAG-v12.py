@@ -1,11 +1,9 @@
 # Location: pages/1_PDF_RAG.py
 # Refactored implementation of PDF RAG using modular components
-# With fixed example question buttons that properly trigger LLM calls
 
 import os
 import sys
 import streamlit as st
-from datetime import datetime
 
 # Add the src directory to the path to allow importing from parent directory
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -14,9 +12,8 @@ from models.chat_history_manager import ChatHistoryManager
 
 # Import shared utilities
 from utils.ui_helpers import (
-    initialize_session_state, display_chat_messages, 
-    handle_chat_input, display_history_view,
-    process_chat_message
+    initialize_session_state, display_example_questions,
+    display_chat_messages, handle_chat_input, display_history_view
 )
 from utils.sidebar import display_sidebar
 
@@ -43,45 +40,13 @@ else:
     # Display sidebar with controls
     display_sidebar(app_type, chatbot_key, messages_key, session_id_key, PDFChatbot, ['pdf'])
     
-    # Display example questions with direct LLM triggering
-    st.subheader("Example Questions")
+    # Display example questions
     example_questions = [
         "What are the main topics in the document?",
         "Summarize the key points.",
         "What does the document say about X?"
     ]
-    
-    # Create columns for the example buttons
-    col1, col2, col3 = st.columns(3)
-    
-    # Define a function to handle clicking example buttons
-    def handle_example_click(question):
-        # Add user message to chat history
-        user_message = {
-            "role": "user", 
-            "content": question,
-            "timestamp": datetime.now().isoformat()
-        }
-        st.session_state[messages_key].append(user_message)
-        
-        # Process the message to get a response
-        process_chat_message(app_type, chatbot_key, messages_key, session_id_key, question)
-        
-        # Force rerun to update the UI
-        st.rerun()
-    
-    # Display buttons in columns with direct LLM call handling
-    with col1:
-        if st.button(example_questions[0]):
-            handle_example_click(example_questions[0])
-            
-    with col2:
-        if st.button(example_questions[1]):
-            handle_example_click(example_questions[1])
-            
-    with col3:
-        if st.button(example_questions[2]):
-            handle_example_click(example_questions[2])
+    display_example_questions(app_type, messages_key, example_questions)
     
     # Main chat interface
     st.subheader("Chat with your PDFs")

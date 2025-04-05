@@ -1,0 +1,65 @@
+{
+  "session_id": "sqlite_6c952a86",
+  "rag_type": "sqlite",
+  "last_updated": "2025-04-05T13:33:48.409007",
+  "message_count": 6,
+  "messages": [
+    {
+      "role": "user",
+      "content": "How many records are in each table?",
+      "timestamp": "2025-04-05T13:24:51.721873"
+    },
+    {
+      "role": "assistant",
+      "content": "I've executed the following SQL query based on your question:\n\n```sql\nSELECT 'albums' AS table_name, COUNT(*) AS record_count FROM albums\nUNION\nSELECT 'artists' AS table_name, COUNT(*) AS record_count FROM artists\nUNION\nSELECT 'customers' AS table_name, COUNT(*) AS record_count FROM customers\nUNION\nSELECT 'employees' AS table_name, COUNT(*) AS record_count FROM employees\nUNION\nSELECT 'genres' AS table_name, COUNT(*) AS record_count FROM genres\nUNION\nSELECT 'invoice_items' AS table_name, COUNT(*) AS record_count FROM invoice_items\nUNION\nSELECT 'invoices' AS table_name, COUNT(*) AS record_count FROM invoices\nUNION\nSELECT 'media_types' AS table_name, COUNT(*) AS record_count FROM media_types\nUNION\nSELECT 'playlist_track' AS table_name, COUNT(*) AS record_count FROM playlist_track\nUNION\nSELECT 'playlists' AS table_name, COUNT(*) AS record_count FROM playlists\nUNION\nSELECT 'tracks' AS table_name, COUNT(*) AS record_count FROM tracks;\n```\n\nThe query returned 11 rows.",
+      "timestamp": "2025-04-05T13:24:54.327897",
+      "model": "gpt-3.5-turbo",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    },
+    {
+      "role": "user",
+      "content": "find top 4 customers by sales ",
+      "timestamp": "2025-04-05T13:25:44.060633"
+    },
+    {
+      "role": "assistant",
+      "content": "I've executed the following SQL query based on your question:\n\n```sql\nSELECT c.CustomerId, c.FirstName, c.LastName, SUM(i.Total) AS TotalSales\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nGROUP BY c.CustomerId\nORDER BY TotalSales DESC\nLIMIT 4;\n```\n\nThe query returned 4 rows.",
+      "timestamp": "2025-04-05T13:25:44.945710",
+      "model": "gpt-3.5-turbo",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    },
+    {
+      "role": "user",
+      "content": "find top 6 customers by sales",
+      "timestamp": "2025-04-05T13:33:47.558881"
+    },
+    {
+      "role": "assistant",
+      "content": "I've executed the following SQL query based on your question:\n\n```sql\nSELECT c.CustomerId, c.FirstName, c.LastName, SUM(i.Total) AS TotalSales\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nGROUP BY c.CustomerId\nORDER BY TotalSales DESC\nLIMIT 6;\n```\n\nThe query returned 6 rows.",
+      "timestamp": "2025-04-05T13:33:48.408477",
+      "model": "gpt-3.5-turbo",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": [
+      "chinook.sqlite3"
+    ]
+  }
+}

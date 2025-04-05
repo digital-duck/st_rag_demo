@@ -1255,7 +1255,7 @@ def display_chat_messages():
                         params = message["rag_params"]
                         st.caption(f"- k_value: {params.get('k_value', 'N/A')}")
                         st.caption(f"- chunk_size: {params.get('chunk_size', 'N/A')}")
-                        st.caption(f"- chunk_overlap: {params.get('chunk_overlap', 'N/A')}")
+                        st.caption(f"- chunk_overlap: {params.get('chunk_overlap', 'N/A')}")                        
 
 def handle_chat_input():
     """Handle the chat input and generate responses"""

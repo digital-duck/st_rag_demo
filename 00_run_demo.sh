@@ -1,0 +1,1 @@
+streamlit run src/RAG_Demo.py

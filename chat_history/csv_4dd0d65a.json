@@ -1,0 +1,63 @@
+{
+  "session_id": "csv_4dd0d65a",
+  "rag_type": "csv",
+  "last_updated": "2025-04-05T14:44:28.351484",
+  "message_count": 6,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Summarize the CSV data.",
+      "timestamp": "2025-04-05T14:43:50.070055"
+    },
+    {
+      "role": "assistant",
+      "content": "The CSV file \"Code_Basics_FAQ.csv\" contains 75 rows and 2 columns. \n\n- The first column is \"prompt\" which includes questions or prompts related to a bootcamp or course.\n- The second column is \"response\" which provides answers or responses to the corresponding prompts.\n\nThe data type of both columns is 'object', indicating text data. \n\nSome sample prompts and responses from the data include questions about prerequisites for the bootcamp, the datasets used, duration of the bootcamp, and more. \n\nThe responses provide detailed information and explanations related to the questions asked in the prompts, addressing various concerns potential participants may have about the bootcamp.\n\nIf you have any specific questions or need more detailed information from the CSV data, feel free to ask!",
+      "timestamp": "2025-04-05T14:43:51.965238",
+      "model": "gpt-3.5-turbo",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    },
+    {
+      "role": "user",
+      "content": "which courses do you recommend for python",
+      "timestamp": "2025-04-05T14:44:15.112867"
+    },
+    {
+      "role": "assistant",
+      "content": "I don't have specific information about courses recommended for Python in the provided data. If you are looking for Python courses, I recommend checking out online learning platforms like Coursera, Udemy, Codecademy, or even Codebasics, which is mentioned in the context provided. These platforms offer a variety of Python courses for beginners, intermediate, and advanced learners.\n\nYou can explore courses based on your current skill level, learning objectives, and areas of interest within Python programming. Additionally, reading reviews, checking course content, and instructor credentials can help you make an informed decision when selecting a Python course that best suits your needs.\n\nIf you have any other questions or need further assistance, feel free to ask!",
+      "timestamp": "2025-04-05T14:44:16.750097",
+      "model": "gpt-3.5-turbo",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    },
+    {
+      "role": "user",
+      "content": "Calculate key statistics from the CSV.",
+      "timestamp": "2025-04-05T14:44:26.591358"
+    },
+    {
+      "role": "assistant",
+      "content": "Since the CSV file \"Code_Basics_FAQ.csv\" contains text data in the 'prompt' and 'response' columns, traditional statistical calculations like mean, median, or standard deviation are not applicable. \n\nHowever, we can provide some key statistics based on the text data:\n\n1. **Unique Values**: \n   - Prompt: There are 75 unique prompts in the dataset.\n   - Response: There are 73 unique responses in the dataset.\n\n2. **Sample Data**:\n   - The data includes questions or prompts related to programming bootcamps, prerequisites, duration, access, and more.\n   - The responses provide detailed answers to these questions, addressing various concerns potential participants may have.\n\nIf you have any specific questions or need more insights from the data, feel free to ask!",
+      "timestamp": "2025-04-05T14:44:28.350874",
+      "model": "gpt-3.5-turbo",
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": []
+  }
+}

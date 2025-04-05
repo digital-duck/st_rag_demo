@@ -1,0 +1,127 @@
+{
+  "session_id": "sqlite_49a20d77",
+  "rag_type": "sqlite",
+  "last_updated": "2025-04-05T09:41:07.173479",
+  "message_count": 3,
+  "messages": [
+    {
+      "role": "user",
+      "content": "Write a query to list all tables and their row counts",
+      "timestamp": "2025-04-05T09:40:59.193623"
+    },
+    {
+      "role": "user",
+      "content": "Write a query to list all tables and their row counts",
+      "timestamp": "2025-04-05T09:41:06.279862"
+    },
+    {
+      "role": "assistant",
+      "content": "I've executed the following SQL query based on your question:\n\n```sql\nSELECT name AS \"Table Name\", (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = \"Table Name\") AS \"Row Count\"\nFROM sqlite_master\nWHERE type = 'table';\n```\n\nThe query returned 13 rows.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-05T09:41:07.173364",
+      "query": "SELECT name AS \"Table Name\", (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = \"Table Name\") AS \"Row Count\"\nFROM sqlite_master\nWHERE type = 'table';",
+      "has_data": true,
+      "data_dict": {
+        "columns": [
+          "Table Name",
+          "Row Count"
+        ],
+        "data": [
+          [
+            "albums",
+            0
+          ],
+          [
+            "sqlite_sequence",
+            0
+          ],
+          [
+            "artists",
+            0
+          ],
+          [
+            "customers",
+            0
+          ],
+          [
+            "employees",
+            0
+          ],
+          [
+            "genres",
+            0
+          ],
+          [
+            "invoices",
+            0
+          ],
+          [
+            "invoice_items",
+            0
+          ],
+          [
+            "media_types",
+            0
+          ],
+          [
+            "playlists",
+            0
+          ],
+          [
+            "playlist_track",
+            0
+          ],
+          [
+            "tracks",
+            0
+          ],
+          [
+            "sqlite_stat1",
+            0
+          ]
+        ],
+        "index": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12
+        ]
+      },
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      },
+      "debug_info": {
+        "prompt": "Write a query to list all tables and their row counts",
+        "stage": "query_returned_dataframe",
+        "timestamp": "2025-04-05T09:41:06.281228",
+        "model": "gpt-3.5-turbo",
+        "is_sql_query": true,
+        "is_viz_query": false,
+        "generated_query": "SELECT name AS \"Table Name\", (SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = \"Table Name\") AS \"Row Count\"\nFROM sqlite_master\nWHERE type = 'table';",
+        "query_result_type": "<class 'pandas.core.frame.DataFrame'>",
+        "row_count": 13,
+        "column_count": 2
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": [
+      "chinook.sqlite3"
+    ]
+  }
+}
