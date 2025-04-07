@@ -1,0 +1,129 @@
+{
+  "session_id": "sqlite_537ebdbc",
+  "rag_type": "sqlite",
+  "last_updated": "2025-04-06T18:45:12.526088",
+  "message_count": 2,
+  "messages": [
+    {
+      "role": "user",
+      "content": "find top 10 customers by sales",
+      "timestamp": "2025-04-06T18:45:10.481463"
+    },
+    {
+      "role": "assistant",
+      "content": "I've executed the following SQL query based on your question:\n\n```sql\nSELECT c.CustomerId, c.FirstName, c.LastName, SUM(ii.UnitPrice * ii.Quantity) AS TotalSales\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nJOIN invoice_items ii ON i.InvoiceId = ii.InvoiceId\nGROUP BY c.CustomerId\nORDER BY TotalSales DESC\nLIMIT 10;\n```\n\nThe query returned 10 rows.",
+      "model": "gpt-3.5-turbo",
+      "timestamp": "2025-04-06T18:45:12.525969",
+      "query": "SELECT c.CustomerId, c.FirstName, c.LastName, SUM(ii.UnitPrice * ii.Quantity) AS TotalSales\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nJOIN invoice_items ii ON i.InvoiceId = ii.InvoiceId\nGROUP BY c.CustomerId\nORDER BY TotalSales DESC\nLIMIT 10;",
+      "has_data": true,
+      "data_dict": {
+        "columns": [
+          "CustomerId",
+          "FirstName",
+          "LastName",
+          "TotalSales"
+        ],
+        "data": [
+          [
+            6,
+            "Helena",
+            "Holý",
+            49.62
+          ],
+          [
+            26,
+            "Richard",
+            "Cunningham",
+            47.62
+          ],
+          [
+            57,
+            "Luis",
+            "Rojas",
+            46.62
+          ],
+          [
+            45,
+            "Ladislav",
+            "Kovács",
+            45.62
+          ],
+          [
+            46,
+            "Hugh",
+            "O'Reilly",
+            45.62
+          ],
+          [
+            24,
+            "Frank",
+            "Ralston",
+            43.62
+          ],
+          [
+            28,
+            "Julia",
+            "Barnett",
+            43.62
+          ],
+          [
+            37,
+            "Fynn",
+            "Zimmermann",
+            43.62
+          ],
+          [
+            7,
+            "Astrid",
+            "Gruber",
+            42.62
+          ],
+          [
+            25,
+            "Victor",
+            "Stevens",
+            42.62
+          ]
+        ],
+        "index": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      },
+      "rag_params": {
+        "k_value": 5,
+        "chunk_size": 1000,
+        "chunk_overlap": 100
+      },
+      "debug_info": {
+        "prompt": "find top 10 customers by sales",
+        "stage": "query_returned_dataframe",
+        "timestamp": "2025-04-06T18:45:10.482129",
+        "model": "gpt-3.5-turbo",
+        "is_sql_query": true,
+        "is_viz_query": false,
+        "generated_query": "SELECT c.CustomerId, c.FirstName, c.LastName, SUM(ii.UnitPrice * ii.Quantity) AS TotalSales\nFROM customers c\nJOIN invoices i ON c.CustomerId = i.CustomerId\nJOIN invoice_items ii ON i.InvoiceId = ii.InvoiceId\nGROUP BY c.CustomerId\nORDER BY TotalSales DESC\nLIMIT 10;",
+        "query_result_type": "<class 'pandas.core.frame.DataFrame'>",
+        "row_count": 10,
+        "column_count": 4
+      }
+    }
+  ],
+  "metadata": {
+    "model_name": "gpt-3.5-turbo",
+    "k_value": 5,
+    "chunk_size": 1000,
+    "chunk_overlap": 100,
+    "files_processed": [
+      "chinook.sqlite3"
+    ]
+  }
+}
