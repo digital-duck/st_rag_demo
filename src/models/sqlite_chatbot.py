@@ -1,3 +1,8 @@
+"""
+ToDo: add retriever to narrow down context, instead of using complete table info of a db
+"""
+
+
 import os
 import hashlib
 import tempfile
